@@ -68,6 +68,60 @@ class MistralClient:
                 raise ValueError(msg)
             return parsed
 
+    def generate_completion(self, system_prompt: str, user_prompt: str, temperature: float = 0.1) -> str:
+        api_key = self._settings.mistral_api_key.strip()
+        if not api_key:
+            return self._fallback_generation(user_prompt)
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self._settings.mistral_model,
+            "temperature": temperature,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        }
+
+        with httpx.Client(timeout=self._settings.mistral_timeout_seconds) as client:
+            response = client.post(
+                f"{self._settings.mistral_api_base}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            parsed = response.json()
+            if not isinstance(parsed, dict):
+                msg = "Unexpected Mistral completion response format"
+                raise ValueError(msg)
+            choices = parsed.get("choices")
+            if not isinstance(choices, list) or not choices:
+                msg = "Mistral completion response missing choices"
+                raise ValueError(msg)
+            first = choices[0]
+            if not isinstance(first, dict):
+                msg = "Unexpected choice format"
+                raise ValueError(msg)
+            message = first.get("message")
+            if not isinstance(message, dict):
+                msg = "Unexpected message format"
+                raise ValueError(msg)
+            content = message.get("content", "")
+            if not isinstance(content, str):
+                msg = "Unexpected completion content format"
+                raise ValueError(msg)
+            return content.strip()
+
+    def _fallback_generation(self, user_prompt: str) -> str:
+        lines = [line.strip() for line in user_prompt.splitlines() if line.strip().startswith("[source:")]
+        if not lines:
+            return "I could not find enough relevant context to answer."
+        bullets = [f"- {line.split('] ', maxsplit=1)[-1][:180]}" for line in lines[:3]]
+        return "Based on the retrieved context:\n" + "\n".join(bullets)
+
 
 def _deterministic_fallback_embedding(text: str, *, dimension: int = 64) -> list[float]:
     digest = sha1(text.encode()).digest()
