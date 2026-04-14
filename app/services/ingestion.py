@@ -71,3 +71,21 @@ def persist_extracted_pages(
     }
     target.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
     return target
+
+
+def persist_chunks(
+    document_id: str,
+    source_filename: str,
+    chunks: list[dict[str, object]],
+    settings: Settings,
+) -> Path:
+    chunk_dir = settings.data_dir / "indexes" / "chunks"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+    target = chunk_dir / f"{document_id}.json"
+    payload = {
+        "document_id": document_id,
+        "source_filename": source_filename,
+        "chunks": chunks,
+    }
+    target.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    return target

@@ -4,8 +4,10 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.config import get_settings
 from app.models.ingest import IngestFileResult, IngestResponse
+from app.services.chunking import chunk_pages
 from app.services.ingestion import (
     build_rejected_result,
+    persist_chunks,
     persist_extracted_pages,
     persist_raw_pdf,
     validate_pdf_upload,
@@ -61,6 +63,27 @@ async def ingest_files(files: FilesParam) -> IngestResponse:
             ],
             settings=settings,
         )
+        chunks = chunk_pages(
+            document_id=document_id,
+            pages=extraction.pages,
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
+        )
+        persist_chunks(
+            document_id=document_id,
+            source_filename=upload.filename or "upload.pdf",
+            chunks=[
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "text": chunk.text,
+                    "page_start": chunk.page_start,
+                    "page_end": chunk.page_end,
+                    "char_count": chunk.char_count,
+                }
+                for chunk in chunks
+            ],
+            settings=settings,
+        )
         results.append(
             IngestFileResult(
                 filename=upload.filename or "upload.pdf",
@@ -68,6 +91,7 @@ async def ingest_files(files: FilesParam) -> IngestResponse:
                 status="accepted",
                 bytes_received=len(file_bytes),
                 page_count=extraction.page_count,
+                chunk_count=len(chunks),
                 text_char_count=extraction.text_char_count,
                 warnings=extraction.warnings,
             )

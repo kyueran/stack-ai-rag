@@ -10,6 +10,7 @@ class IngestFileResult(BaseModel):
     status: Literal["accepted", "rejected"]
     bytes_received: int = 0
     page_count: int = 0
+    chunk_count: int = 0
     text_char_count: int = 0
     warnings: list[str] = Field(default_factory=list)
     extraction_error: str | None = None
