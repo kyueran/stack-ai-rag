@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from app.db.database import Database
+from app.services.tokenizer import term_frequencies, tokenize
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,15 @@ class IngestionRepository:
 
     def replace_chunks(self, document_id: str, chunks: list[ChunkRecord]) -> None:
         with self.database.connection() as conn:
+            existing_chunk_ids = [
+                row["chunk_id"]
+                for row in conn.execute(
+                    "SELECT chunk_id FROM chunks WHERE document_id = ?",
+                    (document_id,),
+                ).fetchall()
+            ]
+            if existing_chunk_ids:
+                conn.executemany("DELETE FROM terms WHERE chunk_id = ?", [(chunk_id,) for chunk_id in existing_chunk_ids])
             conn.execute("DELETE FROM chunks WHERE document_id = ?", (document_id,))
             conn.executemany(
                 """
@@ -64,3 +74,16 @@ class IngestionRepository:
                     for chunk in chunks
                 ],
             )
+            term_rows: list[tuple[str, str, int, str]] = []
+            for chunk in chunks:
+                frequencies = term_frequencies(tokenize(chunk.text))
+                for term, frequency in frequencies.items():
+                    term_rows.append((term, chunk.chunk_id, frequency, "body"))
+            if term_rows:
+                conn.executemany(
+                    """
+                    INSERT INTO terms (term, chunk_id, tf, field)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    term_rows,
+                )
