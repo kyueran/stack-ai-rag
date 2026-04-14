@@ -39,7 +39,7 @@ def test_hybrid_retrieval_fuses_scores_and_logs_results(tmp_path: Path) -> None:
     )
 
     assert len(results) == 2
-    assert results[0].chunk_id in {"chunk-1", "chunk-2"}
+    assert results[0].chunk_id == "chunk-2"
 
     with db.connection() as conn:
         count = conn.execute("SELECT COUNT(*) AS count FROM retrieval_logs").fetchone()["count"]

@@ -59,7 +59,7 @@ class HybridRetrievalService:
                 semantic_hit.text,
             )
 
-        candidate_ids = set(keyword_rank) | set(semantic_rank)
+        candidate_ids = sorted(set(keyword_rank) | set(semantic_rank))
         ranked_candidates: list[RetrievedChunk] = []
 
         for chunk_id in candidate_ids:
@@ -72,7 +72,17 @@ class HybridRetrievalService:
             if chunk_id in semantic_rank:
                 rrf_score += 1.0 / (rrf_k + semantic_rank[chunk_id])
 
-            fused_score = (keyword_weight * keyword_score) + (semantic_weight * semantic_score) + (0.2 * rrf_score)
+            present_weight = 0.0
+            weighted_sum = 0.0
+            if chunk_id in keyword_rank:
+                weighted_sum += keyword_weight * keyword_score
+                present_weight += keyword_weight
+            if chunk_id in semantic_rank:
+                weighted_sum += semantic_weight * semantic_score
+                present_weight += semantic_weight
+
+            blended_score = weighted_sum / present_weight if present_weight else 0.0
+            fused_score = blended_score + (0.2 * rrf_score)
             doc_id, page_start, page_end, text = metadata[chunk_id]
             ranked_candidates.append(
                 RetrievedChunk(
@@ -88,7 +98,9 @@ class HybridRetrievalService:
                 )
             )
 
-        ranked_candidates.sort(key=lambda item: item.fused_score, reverse=True)
+        ranked_candidates.sort(
+            key=lambda item: (-item.fused_score, -item.semantic_score, -item.keyword_score, item.chunk_id)
+        )
         top_candidates = ranked_candidates[:top_k]
 
         self.retrieval_repository.log_retrieval(
@@ -119,5 +131,5 @@ def _normalize_scores(scores: dict[str, float]) -> dict[str, float]:
     max_score = max(scores.values())
     min_score = min(scores.values())
     if max_score == min_score:
-        return dict.fromkeys(scores.keys(), 1.0)
+        return dict.fromkeys(scores.keys(), 0.5)
     return {key: (value - min_score) / (max_score - min_score) for key, value in scores.items()}
