@@ -133,15 +133,17 @@ async def ingest_files(files: FilesParam) -> IngestResponse:
                 ],
                 embeddings=embeddings,
             )
-        except Exception:
+        except Exception as exc:
             cleanup_document_artifacts(document_id, raw_path, settings)
+            error_code = exc.__class__.__name__
             results.append(
                 IngestFileResult(
                     filename=upload.filename or "upload.pdf",
                     status="rejected",
                     bytes_received=len(file_bytes),
                     document_id=document_id,
-                    error="Ingestion failed and was rolled back safely",
+                    error=f"Ingestion failed and was rolled back safely ({error_code})",
+                    extraction_error=str(exc)[:220],
                 )
             )
             continue
