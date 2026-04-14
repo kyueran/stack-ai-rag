@@ -3,6 +3,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.config import get_settings
+from app.core.runtime import get_ingestion_repository
+from app.db.repositories import ChunkRecord
 from app.models.ingest import IngestFileResult, IngestResponse
 from app.services.chunking import chunk_pages
 from app.services.ingestion import (
@@ -21,6 +23,7 @@ FilesParam = Annotated[list[UploadFile], File(...)]
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_files(files: FilesParam) -> IngestResponse:
     settings = get_settings()
+    ingestion_repository = get_ingestion_repository()
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     if len(files) > settings.max_files_per_upload:
@@ -83,6 +86,27 @@ async def ingest_files(files: FilesParam) -> IngestResponse:
                 for chunk in chunks
             ],
             settings=settings,
+        )
+        ingestion_repository.upsert_document(
+            document_id=document_id,
+            filename=upload.filename or "upload.pdf",
+            byte_size=len(file_bytes),
+            page_count=extraction.page_count,
+            chunk_count=len(chunks),
+            text_char_count=extraction.text_char_count,
+        )
+        ingestion_repository.replace_chunks(
+            document_id=document_id,
+            chunks=[
+                ChunkRecord(
+                    chunk_id=chunk.chunk_id,
+                    page_start=chunk.page_start,
+                    page_end=chunk.page_end,
+                    char_count=chunk.char_count,
+                    text=chunk.text,
+                )
+                for chunk in chunks
+            ],
         )
         results.append(
             IngestFileResult(
