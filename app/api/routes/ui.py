@@ -1,16 +1,20 @@
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.api.routes.ingest import ingest_files
 from app.api.routes.query import query_knowledge_base
+from app.core.config import get_settings
 from app.models.query import QueryRequest
+from app.ui.answer_format import build_answer_view
 
 router = APIRouter(tags=["ui"])
 FilesParam = Annotated[list[UploadFile], File(...)]
+DOCUMENT_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 
 _templates = Jinja2Templates(directory=str(Path(__file__).resolve().parents[2] / "ui" / "templates"))
 
@@ -49,11 +53,27 @@ def ui_query(
     output_format: Literal["paragraph", "list", "table"] = Form("paragraph"),
 ) -> HTMLResponse:
     response = query_knowledge_base(QueryRequest(query=query, output_format=output_format))
+    answer_view = build_answer_view(response.answer, response.citations, output_format)
     return _templates.TemplateResponse(
         request=request,
         name="partials/chat_turn.html",
         context={
             "user_query": query,
             "response": response,
+            "answer_view": answer_view,
         },
     )
+
+
+@router.get("/ui/document/{document_id}")
+def ui_document(document_id: str) -> FileResponse:
+    if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    raw_dir = get_settings().data_dir / "pdfs" / "raw"
+    matches = sorted(raw_dir.glob(f"{document_id}_*.pdf"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    pdf_path = matches[0]
+    return FileResponse(path=pdf_path, media_type="application/pdf", filename=pdf_path.name)
