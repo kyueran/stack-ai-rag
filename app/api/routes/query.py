@@ -10,6 +10,7 @@ from app.core.runtime import (
     get_query_rewriter,
 )
 from app.models.query import Citation, QueryRequest, QueryResponse
+from app.services.answer_shape import select_output_format
 
 router = APIRouter(prefix="/api/v1", tags=["query"])
 
@@ -35,14 +36,13 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         )
 
     intent_result = intent_router.detect(payload.query)
-    rewritten = query_rewriter.rewrite(payload.query)
 
     if intent_result.intent == "chitchat":
         return QueryResponse(
             status="no_search",
             intent=intent_result.intent,
-            rewritten_query=rewritten.rewritten_query,
-            answer="Hi! Ask me a question about your uploaded PDFs and I can help.",
+            rewritten_query=payload.query.strip().lower(),
+            answer="Hi, ask me any question regarding your documents!",
             disclaimer=policy_decision.disclaimer,
         )
 
@@ -50,12 +50,14 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         return QueryResponse(
             status="refused",
             intent=intent_result.intent,
-            rewritten_query=rewritten.rewritten_query,
+            rewritten_query=payload.query.strip().lower(),
             answer="I can't help with that request.",
             refusal_reason=intent_result.reason,
             disclaimer=policy_decision.disclaimer,
         )
 
+    rewritten = query_rewriter.rewrite(payload.query)
+    answer_format = select_output_format(payload.query, intent_result.intent)
     top_k = payload.top_k or settings.retrieval_top_k
     candidates = retrieval_service.retrieve(
         query=payload.query,
@@ -99,7 +101,7 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
     generated_answer = generation_service.generate(
         query=payload.query,
         intent=intent_result.intent,
-        output_format=payload.output_format,
+        output_format=answer_format,
         evidence=candidates[: settings.citation_top_k],
     )
     filtered_answer, unsupported_claims = evidence_checker.filter_answer(
@@ -122,6 +124,7 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         intent=intent_result.intent,
         rewritten_query=rewritten.rewritten_query,
         answer=filtered_answer,
+        answer_format=answer_format,
         citations=citations,
         retrieval_count=len(candidates),
         unsupported_claims=unsupported_claims,

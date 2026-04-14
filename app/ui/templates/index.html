@@ -49,14 +49,6 @@
           hx-indicator="#query-loading"
         >
           <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
-          <label>
-            Output format
-            <select name="output_format">
-              <option value="paragraph">Paragraph</option>
-              <option value="list">List</option>
-              <option value="table">Table</option>
-            </select>
-          </label>
           <button type="submit">Ask</button>
         </form>
         <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>

@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
@@ -50,10 +50,9 @@ async def ui_ingest(request: Request, files: FilesParam) -> HTMLResponse:
 def ui_query(
     request: Request,
     query: str = Form(...),
-    output_format: Literal["paragraph", "list", "table"] = Form("paragraph"),
 ) -> HTMLResponse:
-    response = query_knowledge_base(QueryRequest(query=query, output_format=output_format))
-    answer_view = build_answer_view(response.answer, response.citations, output_format)
+    response = query_knowledge_base(QueryRequest(query=query))
+    answer_view = build_answer_view(response.answer, response.citations, response.answer_format)
     return _templates.TemplateResponse(
         request=request,
         name="partials/chat_turn.html",

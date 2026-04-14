@@ -35,6 +35,7 @@ def test_query_endpoint_chitchat_skips_search(client: TestClient) -> None:
     payload = response.json()
     assert payload["status"] == "no_search"
     assert payload["intent"] == "chitchat"
+    assert payload["answer"] == "Hi, ask me any question regarding your documents!"
 
 
 def test_query_endpoint_refusal_class(client: TestClient) -> None:

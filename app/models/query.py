@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     conversation_id: str | None = None
-    output_format: Literal["paragraph", "list", "table"] = "paragraph"
     top_k: int | None = Field(default=None, ge=1, le=50)
 
 
@@ -24,6 +23,7 @@ class QueryResponse(BaseModel):
     intent: Literal["chitchat", "knowledge_lookup", "refusal"]
     rewritten_query: str
     answer: str
+    answer_format: Literal["paragraph", "list", "table"] = "paragraph"
     citations: list[Citation] = Field(default_factory=list)
     retrieval_count: int = 0
     unsupported_claims: list[str] = Field(default_factory=list)

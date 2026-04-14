@@ -50,7 +50,7 @@ def test_ui_query_renders_clickable_inline_source_links(client: TestClient, monk
 
     monkeypatch.setattr(ui_route, "query_knowledge_base", fake_query)
 
-    response = client.post("/ui/query", data={"query": "what is README", "output_format": "paragraph"})
+    response = client.post("/ui/query", data={"query": "what is README"})
     assert response.status_code == 200
     assert "/ui/document/0123456789abcdef0123456789abcdef#page=3" in response.text
     assert "source:abc123 p3-3" in response.text
