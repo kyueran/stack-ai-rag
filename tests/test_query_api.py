@@ -2,11 +2,31 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.services.retrieval import RetrievedChunk
+
 
 class EmptyRetrievalService:
     def retrieve(self, *args: Any, **kwargs: Any) -> list[Any]:
         _ = (args, kwargs)
         return []
+
+
+class LowEvidenceRetrievalService:
+    def retrieve(self, *args: Any, **kwargs: Any) -> list[RetrievedChunk]:
+        _ = (args, kwargs)
+        return [
+            RetrievedChunk(
+                chunk_id="c-low",
+                document_id="doc-1",
+                text="Weakly related context.",
+                page_start=1,
+                page_end=1,
+                keyword_score=0.01,
+                semantic_score=0.02,
+                rrf_score=0.01,
+                fused_score=0.05,
+            )
+        ]
 
 
 def test_query_endpoint_chitchat_skips_search(client: TestClient) -> None:
@@ -34,3 +54,16 @@ def test_query_endpoint_insufficient_evidence(client: TestClient, monkeypatch: A
     payload = response.json()
     assert payload["status"] == "insufficient_evidence"
     assert payload["intent"] == "knowledge_lookup"
+
+
+def test_query_endpoint_refuses_when_top_evidence_below_threshold(
+    client: TestClient, monkeypatch: Any
+) -> None:
+    import app.api.routes.query as query_route
+
+    monkeypatch.setattr(query_route, "get_hybrid_retrieval_service", lambda: LowEvidenceRetrievalService())
+    response = client.post("/api/v1/query", json={"query": "Summarize implementation details"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "insufficient_evidence"
+    assert payload["answer"] == "insufficient evidence"

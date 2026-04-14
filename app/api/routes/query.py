@@ -53,8 +53,18 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
             status="insufficient_evidence",
             intent=intent_result.intent,
             rewritten_query=rewritten.rewritten_query,
-            answer="I don't have enough evidence in the knowledge base to answer that yet.",
+            answer="insufficient evidence",
             retrieval_count=0,
+        )
+
+    strongest_score = max(candidate.fused_score for candidate in candidates)
+    if strongest_score < settings.evidence_similarity_threshold:
+        return QueryResponse(
+            status="insufficient_evidence",
+            intent=intent_result.intent,
+            rewritten_query=rewritten.rewritten_query,
+            answer="insufficient evidence",
+            retrieval_count=len(candidates),
         )
 
     citations = [
