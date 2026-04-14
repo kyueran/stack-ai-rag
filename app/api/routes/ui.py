@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.api.routes.ingest import ingest_files
 from app.api.routes.query import query_knowledge_base
 from app.core.config import get_settings
+from app.core.runtime import get_concept_service
 from app.models.query import QueryRequest
 from app.ui.answer_format import build_answer_view
 
@@ -25,6 +26,28 @@ def index(request: Request) -> HTMLResponse:
         request=request,
         name="index.html",
         context={"title": "StackAI RAG Chat"},
+    )
+
+
+@router.get("/ui/concepts", response_class=HTMLResponse)
+def ui_concepts(
+    request: Request,
+    document_id: str | None = None,
+    top_n: int = 30,
+) -> HTMLResponse:
+    concept_service = get_concept_service()
+    total_documents, concepts = concept_service.get_concepts(document_id=document_id or None, top_n=top_n)
+    documents = concept_service.get_document_options()
+    return _templates.TemplateResponse(
+        request=request,
+        name="partials/concepts_panel.html",
+        context={
+            "concepts": concepts,
+            "documents": documents,
+            "selected_document_id": document_id or "",
+            "top_n": top_n,
+            "total_documents": total_documents,
+        },
     )
 
 

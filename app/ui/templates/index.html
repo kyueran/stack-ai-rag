@@ -30,12 +30,19 @@
           hx-target="#ingest-status"
           hx-swap="outerHTML"
           hx-indicator="#upload-loading"
+          hx-on::after-request="htmx.ajax('GET', '/ui/concepts', {target:'#concepts-container', swap:'outerHTML'})"
         >
           <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
           <button type="submit">Ingest PDFs</button>
         </form>
         <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
         <div id="ingest-status" class="status-card idle">No uploads yet.</div>
+      </section>
+
+      <section class="panel concepts-panel-shell">
+        <div id="concepts-container" hx-get="/ui/concepts" hx-trigger="load" hx-swap="outerHTML">
+          <div class="status-card idle">Loading TF-IDF concepts...</div>
+        </div>
       </section>
 
       <section class="panel chat-panel">
