@@ -99,6 +99,12 @@ input[type="file"], textarea, select {
 .bubble.system { border-left: 4px solid #60a5fa; }
 .bubble.refused { border-left: 4px solid #dc2626; }
 .bubble.insufficient { border-left: 4px solid var(--warn); }
+.bubble.user {
+  justify-self: end;
+  background: #ecfeff;
+  border-left: 4px solid #0891b2;
+}
+.bubble.assistant { border-left: 4px solid #0f766e; }
 
 .status-card {
   margin-top: 0.8rem;
@@ -109,11 +115,52 @@ input[type="file"], textarea, select {
 }
 
 .status-card.idle { color: var(--muted); }
+.status-card.ok { border-style: solid; border-color: #0f766e; }
+.status-card.partial { border-style: solid; border-color: #ca8a04; }
+.status-card.error { border-style: solid; border-color: #dc2626; }
+
+.error-text {
+  color: #dc2626;
+  font-weight: 600;
+}
 
 .evidence-panel {
   margin-top: 1rem;
   border-top: 1px solid var(--line);
   padding-top: 0.8rem;
+}
+
+.loading {
+  display: none;
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.htmx-request.htmx-indicator,
+.htmx-request .htmx-indicator {
+  display: block;
+}
+
+.policy-note {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  display: none;
+}
+
+.policy-note.visible {
+  display: block;
+}
+
+.disclaimer {
+  margin-top: 0.55rem;
+  color: #9a3412;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 900px) {

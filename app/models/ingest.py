@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class IngestFileResult(BaseModel):
 
 class IngestResponse(BaseModel):
     status: Literal["ok", "partial_success", "error"]
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     accepted_count: int
     rejected_count: int
     files: list[IngestFileResult]

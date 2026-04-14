@@ -21,16 +21,33 @@
     <section class="panel-grid">
       <section class="panel upload-panel">
         <h2>Knowledge Base Upload</h2>
-        <form id="upload-form" class="stack" enctype="multipart/form-data">
+        <form
+          id="upload-form"
+          class="stack"
+          enctype="multipart/form-data"
+          hx-post="/ui/ingest"
+          hx-encoding="multipart/form-data"
+          hx-target="#ingest-status"
+          hx-swap="outerHTML"
+          hx-indicator="#upload-loading"
+        >
           <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
           <button type="submit">Ingest PDFs</button>
         </form>
+        <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
         <div id="ingest-status" class="status-card idle">No uploads yet.</div>
       </section>
 
       <section class="panel chat-panel">
         <h2>Chat</h2>
-        <form id="query-form" class="stack">
+        <form
+          id="query-form"
+          class="stack"
+          hx-post="/ui/query"
+          hx-target="#chat-thread"
+          hx-swap="beforeend"
+          hx-indicator="#query-loading"
+        >
           <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
           <label>
             Output format
@@ -42,6 +59,7 @@
           </label>
           <button type="submit">Ask</button>
         </form>
+        <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
 
         <div id="chat-thread" class="chat-thread">
           <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
@@ -52,6 +70,7 @@
           <ul id="citation-list">
             <li>Responses will list supporting chunk IDs and page ranges here.</li>
           </ul>
+          <div id="policy-notice" class="policy-note"></div>
         </aside>
       </section>
     </section>

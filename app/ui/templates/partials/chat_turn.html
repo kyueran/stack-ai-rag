@@ -1,0 +1,22 @@
+<article class="bubble user">{{ user_query }}</article>
+<article class="bubble {% if response.status == 'refused' %}refused{% elif response.status == 'insufficient_evidence' %}insufficient{% else %}assistant{% endif %}">
+  {{ response.answer }}
+  {% if response.disclaimer %}
+    <p class="disclaimer">{{ response.disclaimer }}</p>
+  {% endif %}
+</article>
+<ul id="citation-list" hx-swap-oob="outerHTML">
+  {% if response.citations %}
+    {% for citation in response.citations %}
+      <li>
+        <code>{{ citation.chunk_id }}</code> (p{{ citation.page_start }}-{{ citation.page_end }})
+        <small>score {{ '%.3f' % citation.score }}</small>
+      </li>
+    {% endfor %}
+  {% else %}
+    <li>No supporting citations.</li>
+  {% endif %}
+</ul>
+<div id="policy-notice" hx-swap-oob="outerHTML" class="policy-note {% if response.disclaimer %}visible{% endif %}">
+  {% if response.disclaimer %}{{ response.disclaimer }}{% endif %}
+</div>
