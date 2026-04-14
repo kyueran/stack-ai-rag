@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.api.routes.concepts import router as concepts_router
 from app.api.routes.ingest import router as ingest_router
 from app.api.routes.query import router as query_router
 from app.api.routes.ui import router as ui_router
@@ -23,6 +24,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.include_router(ingest_router)
 app.include_router(query_router)
+app.include_router(concepts_router)
 app.include_router(ui_router)
 app.mount(
     "/ui/static",

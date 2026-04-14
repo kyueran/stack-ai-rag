@@ -1,0 +1,79 @@
+<div id="concepts-container" class="concepts-container">
+  <div class="concepts-header">
+    <h2>Key Concepts (TF-IDF)</h2>
+    <p>Core terms ranked by relevance across uploaded document chunks.</p>
+  </div>
+
+  <form
+    class="concepts-form"
+    hx-get="/ui/concepts"
+    hx-target="#concepts-container"
+    hx-swap="outerHTML"
+  >
+    <label>
+      Document scope
+      <select name="document_id">
+        <option value="">All documents</option>
+        {% for doc in documents %}
+          <option value="{{ doc.document_id }}" {% if selected_document_id == doc.document_id %}selected{% endif %}>
+            {{ doc.filename }} ({{ doc.chunk_count }} chunks)
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Top N
+      <input type="number" name="top_n" min="5" max="100" value="{{ top_n }}" />
+    </label>
+
+    <button type="submit">Refresh Concepts</button>
+  </form>
+
+  {% if concepts %}
+    <div class="concepts-table-wrap">
+      <table class="concepts-table">
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>TF-IDF</th>
+            <th>TF</th>
+            <th>DF</th>
+            <th>Coverage</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for concept in concepts %}
+            <tr>
+              <td><code>{{ concept.term }}</code></td>
+              <td>{{ '%.4f' % concept.tfidf }}</td>
+              <td>{{ concept.tf }}</td>
+              <td>{{ concept.df }}</td>
+              <td>{{ '%.1f' % (concept.document_coverage * 100) }}%</td>
+              <td>
+                {% if concept.supports %}
+                  {% set support = concept.supports[0] %}
+                  <a class="source-link" href="/ui/document/{{ support.document_id }}#page={{ support.page_start }}" target="_blank" rel="noopener noreferrer">
+                    {{ support.filename }} p{{ support.page_start }}-{{ support.page_end }}
+                  </a>
+                  <p class="concept-snippet">{{ support.snippet }}</p>
+                {% else %}
+                  <span class="muted">No support</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="status-card idle">
+      {% if total_documents == 0 %}
+        Upload PDFs to generate TF-IDF key concepts.
+      {% else %}
+        No concepts matched this filter yet.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

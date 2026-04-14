@@ -2,7 +2,8 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.db.database import Database, build_database
-from app.db.repositories import IngestionRepository, RetrievalRepository
+from app.db.repositories import ConceptRepository, IngestionRepository, RetrievalRepository
+from app.services.concepts import ConceptService
 from app.services.generation import GenerationService
 from app.services.hallucination import EvidenceChecker
 from app.services.intent import IntentRouter
@@ -76,3 +77,13 @@ def get_evidence_checker() -> EvidenceChecker:
 @lru_cache(maxsize=1)
 def get_query_policy_engine() -> QueryPolicyEngine:
     return QueryPolicyEngine()
+
+
+@lru_cache(maxsize=1)
+def get_concept_repository() -> ConceptRepository:
+    return ConceptRepository(get_database())
+
+
+@lru_cache(maxsize=1)
+def get_concept_service() -> ConceptService:
+    return ConceptService(get_concept_repository())
