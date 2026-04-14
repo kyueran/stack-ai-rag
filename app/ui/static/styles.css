@@ -1,0 +1,121 @@
+:root {
+  --bg: linear-gradient(135deg, #f7f2e7 0%, #f0f7ff 45%, #e7f4ed 100%);
+  --ink: #14213d;
+  --muted: #5f6d85;
+  --panel: rgba(255, 255, 255, 0.9);
+  --line: rgba(20, 33, 61, 0.14);
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --warn: #b45309;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.shell {
+  width: min(1200px, 94vw);
+  margin: 0 auto;
+  padding: 2rem 0 2.5rem;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  letter-spacing: -0.04em;
+}
+
+.hero p { margin: 0.4rem 0; color: var(--muted); }
+
+.eyebrow {
+  display: inline-flex;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+  background: #dff3ea;
+  color: #0f5132;
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+  background: var(--panel);
+  box-shadow: 0 14px 40px rgba(20, 33, 61, 0.08);
+}
+
+.stack {
+  display: grid;
+  gap: 0.6rem;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 0.95rem;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+input[type="file"], textarea, select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.7rem;
+  background: #fff;
+  font: inherit;
+}
+
+.chat-thread {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bubble {
+  border-radius: 14px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.bubble.system { border-left: 4px solid #60a5fa; }
+.bubble.refused { border-left: 4px solid #dc2626; }
+.bubble.insufficient { border-left: 4px solid var(--warn); }
+
+.status-card {
+  margin-top: 0.8rem;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  padding: 0.6rem;
+  font-size: 0.92rem;
+}
+
+.status-card.idle { color: var(--muted); }
+
+.evidence-panel {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .panel-grid { grid-template-columns: 1fr; }
+}
