@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/ui/static/styles.css" />
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">FastAPI + Mistral</p>
+      <h1>Grounded PDF Chat</h1>
+      <p>Upload PDFs, ask questions, and get citation-backed answers.</p>
+    </header>
+
+    <section class="panel-grid">
+      <section class="panel upload-panel">
+        <h2>Knowledge Base Upload</h2>
+        <form
+          id="upload-form"
+          class="stack"
+          enctype="multipart/form-data"
+          hx-post="/ui/ingest"
+          hx-encoding="multipart/form-data"
+          hx-target="#ingest-status"
+          hx-swap="outerHTML"
+          hx-indicator="#upload-loading"
+        >
+          <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
+          <button type="submit">Ingest PDFs</button>
+        </form>
+        <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
+        <div id="ingest-status" class="status-card idle">No uploads yet.</div>
+      </section>
+
+      <section class="panel chat-panel">
+        <h2>Chat</h2>
+        <form
+          id="query-form"
+          class="stack"
+          hx-post="/ui/query"
+          hx-target="#chat-thread"
+          hx-swap="beforeend"
+          hx-indicator="#query-loading"
+        >
+          <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
+          <label>
+            Output format
+            <select name="output_format">
+              <option value="paragraph">Paragraph</option>
+              <option value="list">List</option>
+              <option value="table">Table</option>
+            </select>
+          </label>
+          <button type="submit">Ask</button>
+        </form>
+        <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
+
+        <div id="chat-thread" class="chat-thread">
+          <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
+        </div>
+
+        <aside class="evidence-panel">
+          <h3>Citations</h3>
+          <ul id="citation-list">
+            <li>Responses will list supporting chunk IDs and page ranges here.</li>
+          </ul>
+          <div id="policy-notice" class="policy-note"></div>
+        </aside>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
