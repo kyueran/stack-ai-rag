@@ -32,27 +32,36 @@ A local-first Retrieval-Augmented Generation (RAG) system for PDF knowledge base
 ## Architecture
 
 ```mermaid
-flowchart TD
-    U[User/UI] --> Q[POST /api/v1/query]
-    U --> I[POST /api/v1/ingest]
+flowchart LR
+    user["User / UI"]
+    ingest["POST /api/v1/ingest"]
+    query["POST /api/v1/query"]
+    validate["Validation and PDF signature checks"]
+    extract["PDF extraction per page"]
+    chunk["Sentence-aware chunking with overlap"]
+    index["SQLite indexing: chunks, terms, embeddings"]
+    intent["Intent router"]
+    rewrite["Query rewriter"]
+    keyword["Keyword BM25"]
+    semantic["Semantic cosine"]
+    fusion["Hybrid fusion and rerank"]
+    threshold["Evidence threshold"]
+    insufficient["Insufficient evidence"]
+    generate["Prompt templates and Mistral generation"]
+    verify["Hallucination evidence filter"]
+    response["Response"]
 
-    I --> V[Validation + PDF signature checks]
-    V --> E[PDF extraction per page]
-    E --> C[Sentence-aware chunking + overlap]
-    C --> IDX[SQLite indexing: chunks + terms + embeddings]
-
-    Q --> IR[Intent Router]
-    IR -->|chitchat/refusal| RESP[Response]
-    IR -->|knowledge_lookup| RW[Query Rewriter]
-    RW --> KR[Keyword BM25]
-    RW --> SR[Semantic cosine]
-    KR --> FUS[Hybrid fusion + rerank]
-    SR --> FUS
-    FUS --> TH[Evidence threshold]
-    TH -->|weak| IE[insufficient evidence]
-    TH -->|strong| GEN[Prompt templates + Mistral generation]
-    GEN --> HF[Hallucination evidence filter]
-    HF --> RESP
+    user --> ingest
+    user --> query
+    ingest --> validate --> extract --> chunk --> index
+    query --> intent
+    intent --> rewrite
+    intent --> response
+    rewrite --> keyword --> fusion
+    rewrite --> semantic --> fusion
+    fusion --> threshold
+    threshold --> insufficient
+    threshold --> generate --> verify --> response
 ```
 
 ### Data model (SQLite)
@@ -126,6 +135,8 @@ source .venv/bin/activate
 2. Install
 
 ```bash
+# required for editable pyproject installs on older virtualenv pip versions
+python3 -m pip install --upgrade pip
 python3 -m pip install -e '.[dev]'
 ```
 
