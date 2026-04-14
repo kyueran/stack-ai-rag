@@ -67,3 +67,21 @@ def test_query_endpoint_refuses_when_top_evidence_below_threshold(
     payload = response.json()
     assert payload["status"] == "insufficient_evidence"
     assert payload["answer"] == "insufficient evidence"
+
+
+def test_query_endpoint_pii_refusal_policy(client: TestClient) -> None:
+    response = client.post("/api/v1/query", json={"query": "What is my social security number?"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "refused"
+    assert payload["refusal_reason"] == "pii_request"
+
+
+def test_query_endpoint_legal_disclaimer(client: TestClient, monkeypatch: Any) -> None:
+    import app.api.routes.query as query_route
+
+    monkeypatch.setattr(query_route, "get_hybrid_retrieval_service", lambda: EmptyRetrievalService())
+    response = client.post("/api/v1/query", json={"query": "Do I need a lawyer for this contract?"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["disclaimer"] is not None

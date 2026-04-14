@@ -8,6 +8,7 @@ from app.services.hallucination import EvidenceChecker
 from app.services.intent import IntentRouter
 from app.services.keyword_search import KeywordSearchService
 from app.services.mistral_client import MistralClient
+from app.services.policy import QueryPolicyEngine
 from app.services.query_rewrite import QueryRewriter
 from app.services.retrieval import HybridRetrievalService
 from app.services.semantic_search import SemanticSearchService
@@ -70,3 +71,8 @@ def get_generation_service() -> GenerationService:
 @lru_cache(maxsize=1)
 def get_evidence_checker() -> EvidenceChecker:
     return EvidenceChecker()
+
+
+@lru_cache(maxsize=1)
+def get_query_policy_engine() -> QueryPolicyEngine:
+    return QueryPolicyEngine()
