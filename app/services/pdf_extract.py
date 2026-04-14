@@ -22,6 +22,14 @@ class PdfExtractionResult:
     error: str | None = None
 
 
+def sanitize_extracted_text(text: str) -> str:
+    # PDFs can yield invalid surrogate code points that fail SQLite UTF-8 encoding.
+    without_surrogates = "".join(ch for ch in text if not 0xD800 <= ord(ch) <= 0xDFFF)
+    without_nulls = without_surrogates.replace("\x00", " ")
+    compact = "\n".join(line.strip() for line in without_nulls.splitlines())
+    return compact.strip()
+
+
 def extract_pdf_pages(pdf_path: Path) -> PdfExtractionResult:
     warnings: list[str] = []
 
@@ -54,7 +62,7 @@ def extract_pdf_pages(pdf_path: Path) -> PdfExtractionResult:
 
     for page_index, page in enumerate(reader.pages, start=1):
         try:
-            page_text = (page.extract_text() or "").strip()
+            page_text = sanitize_extracted_text((page.extract_text() or "").strip())
         except Exception as exc:  # pragma: no cover - parser failures vary by PDF structure
             warnings.append(f"Failed to extract page {page_index}: {exc}")
             page_text = ""

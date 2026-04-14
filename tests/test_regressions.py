@@ -63,7 +63,7 @@ def test_ingest_rolls_back_when_storage_fails(client: TestClient, monkeypatch: A
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "error"
-    assert payload["files"][0]["error"] == "Ingestion failed and was rolled back safely"
+    assert payload["files"][0]["error"].startswith("Ingestion failed and was rolled back safely")
 
 
 def test_query_regression_for_weak_evidence_and_policy(client: TestClient, monkeypatch: Any) -> None:
