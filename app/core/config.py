@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     max_files_per_upload: int = Field(default=10, alias="MAX_FILES_PER_UPLOAD", ge=1, le=100)
     chunk_size: int = Field(default=900, alias="CHUNK_SIZE", ge=128, le=4000)
     chunk_overlap: int = Field(default=150, alias="CHUNK_OVERLAP", ge=0, le=1200)
+    retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K", ge=1, le=100)
+    citation_top_k: int = Field(default=5, alias="CITATION_TOP_K", ge=1, le=20)
+    evidence_similarity_threshold: float = Field(default=0.35, alias="EVIDENCE_SIMILARITY_THRESHOLD", ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def validate_chunk_window(self) -> "Settings":

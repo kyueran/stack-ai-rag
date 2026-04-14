@@ -157,3 +157,27 @@ class RetrievalRepository:
                 )
             )
         return candidates
+
+    def log_retrieval(
+        self,
+        query_text: str,
+        transformed_query: str,
+        intent: str,
+        top_k: int,
+        results: list[dict[str, object]],
+    ) -> None:
+        with self.database.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO retrieval_logs (query_text, transformed_query, intent, top_k, results_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    query_text,
+                    transformed_query,
+                    intent,
+                    top_k,
+                    json.dumps(results, ensure_ascii=True),
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
