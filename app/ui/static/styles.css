@@ -235,6 +235,75 @@ input[type="file"], textarea, select {
   font-size: 0.88rem;
 }
 
+.concepts-tabs {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.concepts-tab {
+  border: none;
+  background: #f8fafc;
+  color: var(--ink);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.concepts-tab.is-active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.concepts-view {
+  display: none;
+}
+
+.concepts-view.is-active {
+  display: block;
+}
+
+.concept-graph-layout {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 0.7rem;
+}
+
+.concept-graph-canvas {
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.concept-node-detail {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.concept-node-detail h3,
+.concept-node-detail h4 {
+  margin: 0.2rem 0 0.45rem;
+}
+
+.concept-node-detail p {
+  margin: 0.3rem 0;
+}
+
+.concept-support-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1rem;
+}
+
+.concept-support-list li {
+  margin-bottom: 0.45rem;
+}
+
 .concepts-table-wrap {
   overflow: auto;
   max-height: 430px;
@@ -274,5 +343,11 @@ input[type="file"], textarea, select {
   .panel-grid { grid-template-columns: 1fr; }
   .concepts-form {
     grid-template-columns: 1fr;
+  }
+  .concept-graph-layout {
+    grid-template-columns: 1fr;
+  }
+  .concept-graph-canvas {
+    min-height: 320px;
   }
 }

@@ -64,6 +64,12 @@ class StubConceptService:
             ],
         )
 
+    def get_concept_graph(
+        self, document_id: str | None = None, **kwargs: object
+    ) -> tuple[int, list[StubConcept], list[object]]:
+        _ = kwargs
+        return (1, self.get_concepts(document_id=document_id)[1], [])
+
 
 def test_ui_concepts_panel_renders_tfidf_table(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     import app.api.routes.ui as ui_route
@@ -73,5 +79,6 @@ def test_ui_concepts_panel_renders_tfidf_table(client: TestClient, monkeypatch: 
 
     assert response.status_code == 200
     assert "Key Concepts (TF-IDF)" in response.text
+    assert "Knowledge Graph" in response.text
     assert "equation" in response.text
     assert "/ui/document/doc-a#page=2" in response.text
