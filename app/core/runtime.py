@@ -3,6 +3,7 @@ from functools import lru_cache
 from app.core.config import get_settings
 from app.db.database import Database, build_database
 from app.db.repositories import IngestionRepository, RetrievalRepository
+from app.services.intent import IntentRouter
 from app.services.keyword_search import KeywordSearchService
 from app.services.mistral_client import MistralClient
 from app.services.retrieval import HybridRetrievalService
@@ -46,3 +47,8 @@ def get_hybrid_retrieval_service() -> HybridRetrievalService:
         semantic_service=get_semantic_search_service(),
         retrieval_repository=get_retrieval_repository(),
     )
+
+
+@lru_cache(maxsize=1)
+def get_intent_router() -> IntentRouter:
+    return IntentRouter()
