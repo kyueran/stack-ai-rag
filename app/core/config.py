@@ -17,12 +17,17 @@ class Settings(BaseSettings):
     mistral_api_key: str = Field(default="", alias="MISTRAL_API_KEY")
     mistral_model: str = Field(default="mistral-small-latest", alias="MISTRAL_MODEL")
     mistral_embedding_model: str = Field(default="mistral-embed", alias="MISTRAL_EMBEDDING_MODEL")
+    mistral_api_base: str = Field(default="https://api.mistral.ai/v1", alias="MISTRAL_API_BASE")
+    mistral_timeout_seconds: float = Field(default=30.0, alias="MISTRAL_TIMEOUT_SECONDS", ge=1, le=120)
 
     data_dir: Path = Field(default=Path("data"), alias="DATA_DIR")
     max_upload_mb: int = Field(default=25, alias="MAX_UPLOAD_MB", ge=1, le=200)
     max_files_per_upload: int = Field(default=10, alias="MAX_FILES_PER_UPLOAD", ge=1, le=100)
     chunk_size: int = Field(default=900, alias="CHUNK_SIZE", ge=128, le=4000)
     chunk_overlap: int = Field(default=150, alias="CHUNK_OVERLAP", ge=0, le=1200)
+    retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K", ge=1, le=100)
+    citation_top_k: int = Field(default=5, alias="CITATION_TOP_K", ge=1, le=20)
+    evidence_similarity_threshold: float = Field(default=0.35, alias="EVIDENCE_SIMILARITY_THRESHOLD", ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def validate_chunk_window(self) -> "Settings":
