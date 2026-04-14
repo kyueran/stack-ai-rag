@@ -10,11 +10,13 @@ A local-first Retrieval-Augmented Generation (RAG) system for PDF knowledge base
 - Query endpoint with:
   - intent routing (`chitchat`, `knowledge_lookup`, `refusal`)
   - query rewriting for retrieval
+  - automatic answer shaping (`paragraph`/`list`/`table`) based on query type
   - hybrid retrieval (custom BM25 + semantic search + RRF fusion)
   - citations with evidence threshold enforcement
   - hallucination filtering (post-hoc evidence check)
   - policy controls (PII refusal, legal/medical disclaimers)
 - HTMX chat UI for uploading PDFs and chatting with citation-backed answers.
+- TF-IDF key concepts visualization panel with document filtering and source-page links.
 - SQLite persistence for documents/chunks/terms/embeddings/retrieval logs (no external vector DB).
 
 ## Requirements alignment
@@ -103,7 +105,6 @@ Request:
 ```json
 {
   "query": "What does the architecture say about hallucination filtering?",
-  "output_format": "paragraph",
   "top_k": 20
 }
 ```
@@ -113,14 +114,24 @@ Response includes:
 - `status`: `ok | no_search | refused | insufficient_evidence`
 - `intent`
 - `rewritten_query`
+- `answer_format` chosen automatically by query type
 - `answer`
 - `citations[]` with chunk IDs/pages/scores
 - `unsupported_claims[]` from post-hoc evidence checking
 - `refusal_reason` / `disclaimer` when applicable
 
-### 3) UI and health
+### 3) Concepts
+
+`GET /api/v1/concepts?document_id=<optional>&top_n=30`
+
+- Returns TF-IDF-ranked concepts from ingested documents.
+- Includes evidence links (chunk IDs + page metadata) to trace why each concept is important.
+- `document_id` filter scopes concepts to one document while still using global document frequency (`df`).
+
+### 4) UI and health
 
 - `GET /` HTMX chat UI
+- `GET /ui/concepts` concepts panel partial (used by HTMX)
 - `GET /healthz` service liveness
 
 ## Run locally
