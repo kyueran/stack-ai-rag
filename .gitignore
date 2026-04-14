@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Local config and runtime data
+.env
+.env.*
+!*.example
+/tmp/
+logs/
+data/pdfs/*
+data/indexes/*
+!data/pdfs/.gitkeep
+!data/indexes/.gitkeep
