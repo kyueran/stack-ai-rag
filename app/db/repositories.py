@@ -306,6 +306,12 @@ class ConceptSupportRow:
     snippet: str
 
 
+@dataclass(frozen=True)
+class TermChunkPresenceRow:
+    term: str
+    chunk_id: str
+
+
 class ConceptRepository:
     def __init__(self, database: Database) -> None:
         self.database = database
@@ -418,6 +424,42 @@ class ConceptRepository:
                 page_end=int(row["page_end"]),
                 tf=int(row["tf"]),
                 snippet=str(row["text"])[:180],
+            )
+            for row in rows
+        ]
+
+    def list_term_chunk_presence(
+        self,
+        *,
+        terms: list[str],
+        document_id: str | None,
+    ) -> list[TermChunkPresenceRow]:
+        if not terms:
+            return []
+
+        term_placeholders = ",".join("?" for _ in terms)
+        where_conditions = [f"t.term IN ({term_placeholders})"]
+        params: list[object] = list(terms)
+        if document_id:
+            where_conditions.append("c.document_id = ?")
+            params.append(document_id)
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        with self.database.connection() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT DISTINCT t.term, t.chunk_id
+                FROM terms t
+                JOIN chunks c ON c.chunk_id = t.chunk_id
+                {where_clause}
+                """,
+                params,
+            ).fetchall()
+
+        return [
+            TermChunkPresenceRow(
+                term=str(row["term"]),
+                chunk_id=str(row["chunk_id"]),
             )
             for row in rows
         ]

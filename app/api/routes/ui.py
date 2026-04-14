@@ -1,6 +1,8 @@
 import re
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
@@ -34,10 +36,41 @@ def ui_concepts(
     request: Request,
     document_id: str | None = None,
     top_n: int = 30,
+    view: str = "graph",
 ) -> HTMLResponse:
     concept_service = get_concept_service()
-    total_documents, concepts = concept_service.get_concepts(document_id=document_id or None, top_n=top_n)
+    total_documents, concepts, graph_edges = concept_service.get_concept_graph(
+        document_id=document_id or None,
+        top_n=top_n,
+    )
     documents = concept_service.get_document_options()
+    graph_payload = {
+        "nodes": [
+            {
+                "id": concept.term,
+                "label": concept.term,
+                "value": max(concept.tfidf, 0.05),
+                "tfidf": concept.tfidf,
+                "tf": concept.tf,
+                "df": concept.df,
+                "coverage": concept.document_coverage,
+                "supports": [asdict(support) for support in concept.supports],
+            }
+            for concept in concepts
+        ],
+        "edges": [
+            {
+                "from": edge.source,
+                "to": edge.target,
+                "value": edge.weight,
+                "weight": edge.weight,
+                "title": f"Co-occurred in {edge.weight} chunk(s)",
+            }
+            for edge in graph_edges
+        ],
+    }
+    graph_id = uuid4().hex
+
     return _templates.TemplateResponse(
         request=request,
         name="partials/concepts_panel.html",
@@ -47,6 +80,9 @@ def ui_concepts(
             "selected_document_id": document_id or "",
             "top_n": top_n,
             "total_documents": total_documents,
+            "active_view": view if view in {"table", "graph"} else "graph",
+            "graph_payload": graph_payload,
+            "graph_id": graph_id,
         },
     )
 

@@ -33,3 +33,27 @@ class ConceptsResponse(BaseModel):
     top_n: int
     concepts: list[ConceptItem] = Field(default_factory=list)
     available_documents: list[ConceptDocumentOption] = Field(default_factory=list)
+
+
+class ConceptGraphNode(BaseModel):
+    term: str
+    tfidf: float
+    tf: int
+    df: int
+    document_coverage: float
+    supports: list[ConceptSupport] = Field(default_factory=list)
+
+
+class ConceptGraphEdge(BaseModel):
+    source: str
+    target: str
+    weight: int
+
+
+class ConceptsGraphResponse(BaseModel):
+    document_id: str | None = None
+    total_documents: int
+    top_n: int
+    nodes: list[ConceptGraphNode] = Field(default_factory=list)
+    edges: list[ConceptGraphEdge] = Field(default_factory=list)
+    available_documents: list[ConceptDocumentOption] = Field(default_factory=list)
