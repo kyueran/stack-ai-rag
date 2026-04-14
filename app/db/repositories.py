@@ -60,6 +60,103 @@ class IngestionRepository:
                 ),
             )
 
+    def ingest_document_atomic(
+        self,
+        document_id: str,
+        filename: str,
+        byte_size: int,
+        page_count: int,
+        chunk_count: int,
+        text_char_count: int,
+        chunks: list[ChunkRecord],
+        embeddings: list[EmbeddingRecord],
+    ) -> None:
+        with self.database.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO documents (
+                    document_id, filename, byte_size, page_count, chunk_count, text_char_count, ingested_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(document_id) DO UPDATE SET
+                    filename = excluded.filename,
+                    byte_size = excluded.byte_size,
+                    page_count = excluded.page_count,
+                    chunk_count = excluded.chunk_count,
+                    text_char_count = excluded.text_char_count,
+                    ingested_at = excluded.ingested_at
+                """,
+                (
+                    document_id,
+                    filename,
+                    byte_size,
+                    page_count,
+                    chunk_count,
+                    text_char_count,
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+            existing_chunk_ids = [
+                row["chunk_id"]
+                for row in conn.execute(
+                    "SELECT chunk_id FROM chunks WHERE document_id = ?",
+                    (document_id,),
+                ).fetchall()
+            ]
+            if existing_chunk_ids:
+                conn.executemany("DELETE FROM terms WHERE chunk_id = ?", [(chunk_id,) for chunk_id in existing_chunk_ids])
+                conn.executemany(
+                    "DELETE FROM embeddings WHERE chunk_id = ?",
+                    [(chunk_id,) for chunk_id in existing_chunk_ids],
+                )
+            conn.execute("DELETE FROM chunks WHERE document_id = ?", (document_id,))
+            conn.executemany(
+                """
+                INSERT INTO chunks (chunk_id, document_id, page_start, page_end, char_count, text)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (chunk.chunk_id, document_id, chunk.page_start, chunk.page_end, chunk.char_count, chunk.text)
+                    for chunk in chunks
+                ],
+            )
+
+            term_rows: list[tuple[str, str, int, str]] = []
+            for chunk in chunks:
+                frequencies = term_frequencies(tokenize(chunk.text))
+                for term, frequency in frequencies.items():
+                    term_rows.append((term, chunk.chunk_id, frequency, "body"))
+            if term_rows:
+                conn.executemany(
+                    """
+                    INSERT INTO terms (term, chunk_id, tf, field)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    term_rows,
+                )
+
+            if embeddings:
+                conn.executemany(
+                    """
+                    INSERT INTO embeddings (chunk_id, model, dimension, vector_json, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(chunk_id) DO UPDATE SET
+                        model = excluded.model,
+                        dimension = excluded.dimension,
+                        vector_json = excluded.vector_json,
+                        created_at = excluded.created_at
+                    """,
+                    [
+                        (
+                            embedding.chunk_id,
+                            embedding.model,
+                            len(embedding.vector),
+                            json.dumps(embedding.vector),
+                            datetime.now(UTC).isoformat(),
+                        )
+                        for embedding in embeddings
+                    ],
+                )
+
     def replace_chunks(self, document_id: str, chunks: list[ChunkRecord]) -> None:
         with self.database.connection() as conn:
             existing_chunk_ids = [

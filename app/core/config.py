@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("data"), alias="DATA_DIR")
     max_upload_mb: int = Field(default=25, alias="MAX_UPLOAD_MB", ge=1, le=200)
     max_files_per_upload: int = Field(default=10, alias="MAX_FILES_PER_UPLOAD", ge=1, le=100)
+    max_pdf_pages: int = Field(default=500, alias="MAX_PDF_PAGES", ge=1, le=5000)
     chunk_size: int = Field(default=900, alias="CHUNK_SIZE", ge=128, le=4000)
     chunk_overlap: int = Field(default=150, alias="CHUNK_OVERLAP", ge=0, le=1200)
     retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K", ge=1, le=100)
