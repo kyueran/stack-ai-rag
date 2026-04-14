@@ -1,7 +1,12 @@
 from fastapi import APIRouter
 
 from app.core.config import get_settings
-from app.core.runtime import get_hybrid_retrieval_service, get_intent_router, get_query_rewriter
+from app.core.runtime import (
+    get_generation_service,
+    get_hybrid_retrieval_service,
+    get_intent_router,
+    get_query_rewriter,
+)
 from app.models.query import Citation, QueryRequest, QueryResponse
 
 router = APIRouter(prefix="/api/v1", tags=["query"])
@@ -13,6 +18,7 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
     intent_router = get_intent_router()
     query_rewriter = get_query_rewriter()
     retrieval_service = get_hybrid_retrieval_service()
+    generation_service = get_generation_service()
 
     intent_result = intent_router.detect(payload.query)
     rewritten = query_rewriter.rewrite(payload.query)
@@ -62,7 +68,12 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         )
         for item in candidates[: settings.citation_top_k]
     ]
-    answer = "\n\n".join([f"- {citation.snippet}" for citation in citations])
+    answer = generation_service.generate(
+        query=payload.query,
+        intent=intent_result.intent,
+        output_format=payload.output_format,
+        evidence=candidates[: settings.citation_top_k],
+    )
 
     return QueryResponse(
         status="ok",
