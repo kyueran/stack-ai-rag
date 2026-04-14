@@ -1,7 +1,15 @@
 from fastapi import APIRouter, Query
 
 from app.core.runtime import get_concept_service
-from app.models.concepts import ConceptDocumentOption, ConceptItem, ConceptsResponse, ConceptSupport
+from app.models.concepts import (
+    ConceptDocumentOption,
+    ConceptGraphEdge,
+    ConceptGraphNode,
+    ConceptItem,
+    ConceptsGraphResponse,
+    ConceptsResponse,
+    ConceptSupport,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["concepts"])
 
@@ -41,6 +49,63 @@ def list_tfidf_concepts(
                 ],
             )
             for item in concepts
+        ],
+        available_documents=[
+            ConceptDocumentOption(
+                document_id=document.document_id,
+                filename=document.filename,
+                chunk_count=document.chunk_count,
+            )
+            for document in available_documents
+        ],
+    )
+
+
+@router.get("/concepts/graph", response_model=ConceptsGraphResponse)
+def concept_graph(
+    document_id: str | None = Query(default=None),
+    top_n: int = Query(default=30, ge=1, le=100),
+) -> ConceptsGraphResponse:
+    concept_service = get_concept_service()
+    total_documents, concepts, edges = concept_service.get_concept_graph(
+        document_id=document_id,
+        top_n=top_n,
+    )
+    available_documents = concept_service.get_document_options()
+
+    return ConceptsGraphResponse(
+        document_id=document_id,
+        total_documents=total_documents,
+        top_n=top_n,
+        nodes=[
+            ConceptGraphNode(
+                term=item.term,
+                tfidf=item.tfidf,
+                tf=item.tf,
+                df=item.df,
+                document_coverage=item.document_coverage,
+                supports=[
+                    ConceptSupport(
+                        chunk_id=support.chunk_id,
+                        document_id=support.document_id,
+                        filename=support.filename,
+                        page_start=support.page_start,
+                        page_end=support.page_end,
+                        tf=support.tf,
+                        snippet=support.snippet,
+                    )
+                    for support in item.supports
+                ],
+            )
+            for item in concepts
+        ],
+        edges=[
+            ConceptGraphEdge(
+                source=edge.source,
+                target=edge.target,
+                weight=edge.weight,
+            )
+            for edge in edges
         ],
         available_documents=[
             ConceptDocumentOption(

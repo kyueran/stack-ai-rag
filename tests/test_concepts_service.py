@@ -69,3 +69,45 @@ def test_concept_service_returns_ranked_tfidf_concepts(tmp_path: Path) -> None:
     equation = next(item for item in concepts if item.term == "equation")
     assert equation.supports
     assert equation.supports[0].document_id == "doc-a"
+
+
+def test_concept_service_builds_graph_edges_from_chunk_cooccurrence(tmp_path: Path) -> None:
+    database = Database(tmp_path / "rag.sqlite")
+    database.initialize()
+
+    ingestion_repository = IngestionRepository(database)
+    ingestion_repository.upsert_document(
+        document_id="doc-a",
+        filename="a.pdf",
+        byte_size=120,
+        page_count=1,
+        chunk_count=2,
+        text_char_count=180,
+    )
+    ingestion_repository.replace_chunks(
+        document_id="doc-a",
+        chunks=[
+            ChunkRecord(
+                chunk_id="a-1",
+                page_start=1,
+                page_end=1,
+                char_count=90,
+                text="equation discovery optimization embedding model",
+            ),
+            ChunkRecord(
+                chunk_id="a-2",
+                page_start=1,
+                page_end=1,
+                char_count=90,
+                text="equation model optimization benchmark",
+            ),
+        ],
+    )
+
+    service = ConceptService(ConceptRepository(database))
+    total_docs, concepts, edges = service.get_concept_graph(document_id="doc-a", top_n=10)
+
+    assert total_docs == 1
+    assert concepts
+    assert edges
+    assert any({edge.source, edge.target} == {"equation", "model"} for edge in edges)

@@ -1,5 +1,7 @@
 import math
+from collections import defaultdict
 from dataclasses import dataclass
+from itertools import combinations
 
 from app.db.repositories import (
     ConceptRepository,
@@ -28,6 +30,13 @@ class ConceptScore:
     tfidf: float
     document_coverage: float
     supports: list[ConceptSupport]
+
+
+@dataclass(frozen=True)
+class ConceptGraphEdge:
+    source: str
+    target: str
+    weight: int
 
 
 class ConceptService:
@@ -88,3 +97,47 @@ class ConceptService:
 
         scored.sort(key=lambda item: (-item.tfidf, -item.tf, item.term))
         return total_docs, scored[:top_n]
+
+    def get_concept_graph(
+        self,
+        document_id: str | None = None,
+        *,
+        top_n: int = 30,
+        min_term_length: int = 3,
+        support_k: int = 3,
+        edge_limit: int = 120,
+    ) -> tuple[int, list[ConceptScore], list[ConceptGraphEdge]]:
+        total_docs, concepts = self.get_concepts(
+            document_id=document_id,
+            top_n=top_n,
+            min_term_length=min_term_length,
+            support_k=support_k,
+        )
+        if not concepts:
+            return total_docs, [], []
+
+        top_terms = [item.term for item in concepts]
+        presence_rows = self.repository.list_term_chunk_presence(
+            terms=top_terms,
+            document_id=document_id,
+        )
+
+        chunk_terms: dict[str, set[str]] = defaultdict(set)
+        for row in presence_rows:
+            chunk_terms[row.chunk_id].add(row.term)
+
+        edge_weights: dict[tuple[str, str], int] = defaultdict(int)
+        for terms in chunk_terms.values():
+            if len(terms) < 2:
+                continue
+            ordered_terms = sorted(terms)
+            for left, right in combinations(ordered_terms, 2):
+                edge_weights[(left, right)] += 1
+
+        ranked_edges = sorted(edge_weights.items(), key=lambda item: (-item[1], item[0][0], item[0][1]))
+        edges = [
+            ConceptGraphEdge(source=pair[0], target=pair[1], weight=weight)
+            for pair, weight in ranked_edges[:edge_limit]
+        ]
+
+        return total_docs, concepts, edges
