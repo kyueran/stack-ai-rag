@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -12,6 +13,13 @@ class ChunkRecord:
     page_end: int
     char_count: int
     text: str
+
+
+@dataclass(frozen=True)
+class EmbeddingRecord:
+    chunk_id: str
+    model: str
+    vector: list[float]
 
 
 class IngestionRepository:
@@ -87,3 +95,65 @@ class IngestionRepository:
                     """,
                     term_rows,
                 )
+
+    def replace_embeddings(self, embeddings: list[EmbeddingRecord]) -> None:
+        with self.database.connection() as conn:
+            conn.executemany(
+                """
+                INSERT INTO embeddings (chunk_id, model, dimension, vector_json, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(chunk_id) DO UPDATE SET
+                    model = excluded.model,
+                    dimension = excluded.dimension,
+                    vector_json = excluded.vector_json,
+                    created_at = excluded.created_at
+                """,
+                [
+                    (
+                        embedding.chunk_id,
+                        embedding.model,
+                        len(embedding.vector),
+                        json.dumps(embedding.vector),
+                        datetime.now(UTC).isoformat(),
+                    )
+                    for embedding in embeddings
+                ],
+            )
+
+
+@dataclass(frozen=True)
+class SemanticCandidate:
+    chunk_id: str
+    document_id: str
+    page_start: int
+    page_end: int
+    text: str
+    vector: list[float]
+
+
+class RetrievalRepository:
+    def __init__(self, database: Database) -> None:
+        self.database = database
+
+    def list_semantic_candidates(self) -> list[SemanticCandidate]:
+        with self.database.connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT c.chunk_id, c.document_id, c.page_start, c.page_end, c.text, e.vector_json
+                FROM chunks c
+                JOIN embeddings e ON e.chunk_id = c.chunk_id
+                """
+            ).fetchall()
+        candidates: list[SemanticCandidate] = []
+        for row in rows:
+            candidates.append(
+                SemanticCandidate(
+                    chunk_id=str(row["chunk_id"]),
+                    document_id=str(row["document_id"]),
+                    page_start=int(row["page_start"]),
+                    page_end=int(row["page_end"]),
+                    text=str(row["text"]),
+                    vector=[float(value) for value in json.loads(str(row["vector_json"]))],
+                )
+            )
+        return candidates

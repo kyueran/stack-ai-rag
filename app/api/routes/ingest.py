@@ -3,8 +3,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.config import get_settings
-from app.core.runtime import get_ingestion_repository
-from app.db.repositories import ChunkRecord
+from app.core.runtime import get_ingestion_repository, get_mistral_client
+from app.db.repositories import ChunkRecord, EmbeddingRecord
 from app.models.ingest import IngestFileResult, IngestResponse
 from app.services.chunking import chunk_pages
 from app.services.ingestion import (
@@ -24,6 +24,7 @@ FilesParam = Annotated[list[UploadFile], File(...)]
 async def ingest_files(files: FilesParam) -> IngestResponse:
     settings = get_settings()
     ingestion_repository = get_ingestion_repository()
+    mistral_client = get_mistral_client()
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     if len(files) > settings.max_files_per_upload:
@@ -107,6 +108,17 @@ async def ingest_files(files: FilesParam) -> IngestResponse:
                 )
                 for chunk in chunks
             ],
+        )
+        embedding_response = mistral_client.embed_texts([chunk.text for chunk in chunks])
+        ingestion_repository.replace_embeddings(
+            embeddings=[
+                EmbeddingRecord(
+                    chunk_id=chunk.chunk_id,
+                    model=embedding_response.model,
+                    vector=vector,
+                )
+                for chunk, vector in zip(chunks, embedding_response.vectors, strict=True)
+            ]
         )
         results.append(
             IngestFileResult(

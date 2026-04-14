@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     mistral_api_key: str = Field(default="", alias="MISTRAL_API_KEY")
     mistral_model: str = Field(default="mistral-small-latest", alias="MISTRAL_MODEL")
     mistral_embedding_model: str = Field(default="mistral-embed", alias="MISTRAL_EMBEDDING_MODEL")
+    mistral_api_base: str = Field(default="https://api.mistral.ai/v1", alias="MISTRAL_API_BASE")
+    mistral_timeout_seconds: float = Field(default=30.0, alias="MISTRAL_TIMEOUT_SECONDS", ge=1, le=120)
 
     data_dir: Path = Field(default=Path("data"), alias="DATA_DIR")
     max_upload_mb: int = Field(default=25, alias="MAX_UPLOAD_MB", ge=1, le=200)
