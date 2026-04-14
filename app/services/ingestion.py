@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -52,3 +53,21 @@ def build_rejected_result(file: UploadFile, reason: str) -> IngestFileResult:
         status="rejected",
         error=reason,
     )
+
+
+def persist_extracted_pages(
+    document_id: str,
+    source_filename: str,
+    page_payload: list[dict[str, object]],
+    settings: Settings,
+) -> Path:
+    extraction_dir = settings.data_dir / "indexes" / "extracted"
+    extraction_dir.mkdir(parents=True, exist_ok=True)
+    target = extraction_dir / f"{document_id}.json"
+    payload = {
+        "document_id": document_id,
+        "source_filename": source_filename,
+        "pages": page_payload,
+    }
+    target.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    return target

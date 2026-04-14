@@ -9,6 +9,10 @@ class IngestFileResult(BaseModel):
     document_id: str | None = None
     status: Literal["accepted", "rejected"]
     bytes_received: int = 0
+    page_count: int = 0
+    text_char_count: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    extraction_error: str | None = None
     error: str | None = None
 
 
