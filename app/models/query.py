@@ -26,5 +26,6 @@ class QueryResponse(BaseModel):
     answer: str
     citations: list[Citation] = Field(default_factory=list)
     retrieval_count: int = 0
+    unsupported_claims: list[str] = Field(default_factory=list)
     refusal_reason: str | None = None
     disclaimer: str | None = None

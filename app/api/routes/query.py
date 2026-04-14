@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.core.config import get_settings
 from app.core.runtime import (
+    get_evidence_checker,
     get_generation_service,
     get_hybrid_retrieval_service,
     get_intent_router,
@@ -19,6 +20,7 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
     query_rewriter = get_query_rewriter()
     retrieval_service = get_hybrid_retrieval_service()
     generation_service = get_generation_service()
+    evidence_checker = get_evidence_checker()
 
     intent_result = intent_router.detect(payload.query)
     rewritten = query_rewriter.rewrite(payload.query)
@@ -78,18 +80,32 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         )
         for item in candidates[: settings.citation_top_k]
     ]
-    answer = generation_service.generate(
+    generated_answer = generation_service.generate(
         query=payload.query,
         intent=intent_result.intent,
         output_format=payload.output_format,
         evidence=candidates[: settings.citation_top_k],
     )
+    filtered_answer, unsupported_claims = evidence_checker.filter_answer(
+        generated_answer,
+        candidates[: settings.citation_top_k],
+    )
+    if not filtered_answer:
+        return QueryResponse(
+            status="insufficient_evidence",
+            intent=intent_result.intent,
+            rewritten_query=rewritten.rewritten_query,
+            answer="insufficient evidence",
+            retrieval_count=len(candidates),
+            unsupported_claims=unsupported_claims,
+        )
 
     return QueryResponse(
         status="ok",
         intent=intent_result.intent,
         rewritten_query=rewritten.rewritten_query,
-        answer=answer,
+        answer=filtered_answer,
         citations=citations,
         retrieval_count=len(candidates),
+        unsupported_claims=unsupported_claims,
     )
