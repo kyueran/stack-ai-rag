@@ -8,6 +8,7 @@ from app.core.config import Settings
 from app.models.ingest import IngestFileResult
 
 ALLOWED_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
+PDF_MAGIC_PREFIX = b"%PDF-"
 
 
 def _document_id() -> str:
@@ -19,7 +20,8 @@ def _safe_filename(filename: str | None) -> str:
     return candidate or "upload.pdf"
 
 
-def validate_pdf_upload(file: UploadFile, file_size: int, settings: Settings) -> str | None:
+def validate_pdf_upload(file: UploadFile, file_bytes: bytes, settings: Settings) -> str | None:
+    file_size = len(file_bytes)
     filename = _safe_filename(file.filename)
     if not filename.lower().endswith(".pdf"):
         return "Only .pdf files are allowed"
@@ -32,6 +34,9 @@ def validate_pdf_upload(file: UploadFile, file_size: int, settings: Settings) ->
 
     if file_size > settings.max_upload_bytes:
         return f"File exceeds max size of {settings.max_upload_mb}MB"
+
+    if not file_bytes.startswith(PDF_MAGIC_PREFIX):
+        return "File does not match PDF signature"
 
     return None
 
@@ -89,3 +94,11 @@ def persist_chunks(
     }
     target.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
     return target
+
+
+def cleanup_document_artifacts(document_id: str, raw_path: Path, settings: Settings) -> None:
+    extraction_path = settings.data_dir / "indexes" / "extracted" / f"{document_id}.json"
+    chunk_path = settings.data_dir / "indexes" / "chunks" / f"{document_id}.json"
+    for candidate in (raw_path, extraction_path, chunk_path):
+        if candidate.exists():
+            candidate.unlink()
