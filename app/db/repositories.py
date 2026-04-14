@@ -278,3 +278,146 @@ class RetrievalRepository:
                     datetime.now(UTC).isoformat(),
                 ),
             )
+
+
+@dataclass(frozen=True)
+class DocumentOptionRow:
+    document_id: str
+    filename: str
+    chunk_count: int
+
+
+@dataclass(frozen=True)
+class TermStatsRow:
+    term: str
+    tf: int
+    df: int
+    total_docs: int
+
+
+@dataclass(frozen=True)
+class ConceptSupportRow:
+    chunk_id: str
+    document_id: str
+    filename: str
+    page_start: int
+    page_end: int
+    tf: int
+    snippet: str
+
+
+class ConceptRepository:
+    def __init__(self, database: Database) -> None:
+        self.database = database
+
+    def count_documents(self) -> int:
+        with self.database.connection() as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM documents").fetchone()
+        return int(row["count"]) if row else 0
+
+    def list_documents(self) -> list[DocumentOptionRow]:
+        with self.database.connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT document_id, filename, chunk_count
+                FROM documents
+                ORDER BY ingested_at DESC
+                """
+            ).fetchall()
+        return [
+            DocumentOptionRow(
+                document_id=str(row["document_id"]),
+                filename=str(row["filename"]),
+                chunk_count=int(row["chunk_count"]),
+            )
+            for row in rows
+        ]
+
+    def list_term_stats(self, document_id: str | None, min_term_length: int) -> list[TermStatsRow]:
+        where_conditions: list[str] = ["LENGTH(t.term) >= ?"]
+        scope_params: list[object] = [min_term_length]
+        if document_id:
+            where_conditions.append("c.document_id = ?")
+            scope_params.append(document_id)
+        scope_where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        with self.database.connection() as conn:
+            total_docs_row = conn.execute("SELECT COUNT(*) AS count FROM documents").fetchone()
+            total_docs = int(total_docs_row["count"]) if total_docs_row else 0
+            if total_docs == 0:
+                return []
+
+            rows = conn.execute(
+                f"""
+                WITH scope_tf AS (
+                    SELECT t.term AS term, SUM(t.tf) AS tf
+                    FROM terms t
+                    JOIN chunks c ON c.chunk_id = t.chunk_id
+                    {scope_where_clause}
+                    GROUP BY t.term
+                ),
+                global_df AS (
+                    SELECT t.term AS term, COUNT(DISTINCT c.document_id) AS df
+                    FROM terms t
+                    JOIN chunks c ON c.chunk_id = t.chunk_id
+                    WHERE LENGTH(t.term) >= ?
+                    GROUP BY t.term
+                )
+                SELECT s.term, s.tf, g.df
+                FROM scope_tf s
+                JOIN global_df g ON g.term = s.term
+                ORDER BY s.tf DESC, g.df ASC, s.term ASC
+                """,
+                [*scope_params, min_term_length],
+            ).fetchall()
+
+        return [
+            TermStatsRow(
+                term=str(row["term"]),
+                tf=int(row["tf"]),
+                df=int(row["df"]),
+                total_docs=total_docs,
+            )
+            for row in rows
+        ]
+
+    def list_term_support(
+        self,
+        term: str,
+        document_id: str | None,
+        *,
+        limit: int = 3,
+    ) -> list[ConceptSupportRow]:
+        where_conditions = ["t.term = ?"]
+        params: list[object] = [term]
+        if document_id:
+            where_conditions.append("c.document_id = ?")
+            params.append(document_id)
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+
+        with self.database.connection() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT t.chunk_id, c.document_id, d.filename, c.page_start, c.page_end, t.tf, c.text
+                FROM terms t
+                JOIN chunks c ON c.chunk_id = t.chunk_id
+                JOIN documents d ON d.document_id = c.document_id
+                {where_clause}
+                ORDER BY t.tf DESC, c.char_count DESC, c.chunk_id ASC
+                LIMIT ?
+                """,
+                [*params, limit],
+            ).fetchall()
+
+        return [
+            ConceptSupportRow(
+                chunk_id=str(row["chunk_id"]),
+                document_id=str(row["document_id"]),
+                filename=str(row["filename"]),
+                page_start=int(row["page_start"]),
+                page_end=int(row["page_end"]),
+                tf=int(row["tf"]),
+                snippet=str(row["text"])[:180],
+            )
+            for row in rows
+        ]
