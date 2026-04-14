@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,10 +19,21 @@ class Settings(BaseSettings):
     mistral_embedding_model: str = Field(default="mistral-embed", alias="MISTRAL_EMBEDDING_MODEL")
 
     data_dir: Path = Field(default=Path("data"), alias="DATA_DIR")
-    max_upload_mb: int = Field(default=25, alias="MAX_UPLOAD_MB")
-    max_files_per_upload: int = Field(default=10, alias="MAX_FILES_PER_UPLOAD")
-    chunk_size: int = Field(default=900, alias="CHUNK_SIZE")
-    chunk_overlap: int = Field(default=150, alias="CHUNK_OVERLAP")
+    max_upload_mb: int = Field(default=25, alias="MAX_UPLOAD_MB", ge=1, le=200)
+    max_files_per_upload: int = Field(default=10, alias="MAX_FILES_PER_UPLOAD", ge=1, le=100)
+    chunk_size: int = Field(default=900, alias="CHUNK_SIZE", ge=128, le=4000)
+    chunk_overlap: int = Field(default=150, alias="CHUNK_OVERLAP", ge=0, le=1200)
+
+    @model_validator(mode="after")
+    def validate_chunk_window(self) -> "Settings":
+        if self.chunk_overlap >= self.chunk_size:
+            msg = "CHUNK_OVERLAP must be lower than CHUNK_SIZE"
+            raise ValueError(msg)
+        return self
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
 
 
 @lru_cache(maxsize=1)
