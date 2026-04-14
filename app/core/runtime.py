@@ -6,6 +6,7 @@ from app.db.repositories import IngestionRepository, RetrievalRepository
 from app.services.intent import IntentRouter
 from app.services.keyword_search import KeywordSearchService
 from app.services.mistral_client import MistralClient
+from app.services.query_rewrite import QueryRewriter
 from app.services.retrieval import HybridRetrievalService
 from app.services.semantic_search import SemanticSearchService
 
@@ -52,3 +53,8 @@ def get_hybrid_retrieval_service() -> HybridRetrievalService:
 @lru_cache(maxsize=1)
 def get_intent_router() -> IntentRouter:
     return IntentRouter()
+
+
+@lru_cache(maxsize=1)
+def get_query_rewriter() -> QueryRewriter:
+    return QueryRewriter()
