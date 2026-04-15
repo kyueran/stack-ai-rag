@@ -88,6 +88,22 @@
             edges: { scaling: { min: 1, max: 5 } },
           }
         );
+        const redrawGraph = () => {
+          network.redraw();
+          network.fit({
+            animation: {
+              duration: 220,
+              easingFunction: "easeInOutQuad",
+            },
+          });
+        };
+        const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(redrawGraph) : null;
+        if (resizeObserver) {
+          resizeObserver.observe(canvasEl);
+        }
+        requestAnimationFrame(() => {
+          redrawGraph();
+        });
 
         function escapeHtml(value) {
           return String(value)

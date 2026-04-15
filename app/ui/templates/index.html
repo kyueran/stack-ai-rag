@@ -24,7 +24,7 @@
       <button type="button" class="mode-tab" data-mode="graph">Interactive Knowledge Graph</button>
     </nav>
 
-    <section id="mode-workspace" class="mode-view is-active">
+    <section id="mode-workspace" class="mode-view is-active" aria-hidden="false">
       <section class="panel-grid">
         <section class="panel upload-panel">
           <h2>Knowledge Base Upload</h2>
@@ -76,7 +76,7 @@
       </section>
     </section>
 
-    <section id="mode-graph" class="mode-view">
+    <section id="mode-graph" class="mode-view" aria-hidden="true" hidden>
       <section class="panel graph-panel">
         <div id="concepts-container" data-loaded="false">
           <div class="status-card idle">Switch to this mode to visualize your concept graph.</div>
@@ -96,27 +96,40 @@
       }
 
       let graphLoaded = false;
+      let graphNeedsRefresh = false;
 
-      function loadGraph() {
-        if (!graphLoaded && typeof htmx !== "undefined") {
-          htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
-          graphLoaded = true;
+      function loadGraph(force = false) {
+        if (typeof htmx === "undefined") {
+          return;
         }
+        if (graphLoaded && !force) {
+          return;
+        }
+        htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
+        graphLoaded = true;
+        graphNeedsRefresh = false;
       }
 
       window.refreshKnowledgeGraph = () => {
-        if (typeof htmx !== "undefined") {
-          htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
-          graphLoaded = true;
+        if (graphView.hidden) {
+          graphNeedsRefresh = true;
+          graphLoaded = false;
+          return;
         }
+        loadGraph(true);
       };
 
       function setMode(mode) {
+        const isWorkspace = mode === "workspace";
         tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.mode === mode));
-        workspaceView.classList.toggle("is-active", mode === "workspace");
-        graphView.classList.toggle("is-active", mode === "graph");
-        if (mode === "graph") {
-          loadGraph();
+        workspaceView.classList.toggle("is-active", isWorkspace);
+        graphView.classList.toggle("is-active", !isWorkspace);
+        workspaceView.hidden = !isWorkspace;
+        graphView.hidden = isWorkspace;
+        workspaceView.setAttribute("aria-hidden", String(!isWorkspace));
+        graphView.setAttribute("aria-hidden", String(isWorkspace));
+        if (!isWorkspace) {
+          loadGraph(graphNeedsRefresh);
         }
       }
 
