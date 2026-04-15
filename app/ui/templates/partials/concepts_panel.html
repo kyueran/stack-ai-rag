@@ -1,7 +1,7 @@
 <div id="concepts-container" class="concepts-container">
   <div class="concepts-header">
-    <h2>Key Concepts (TF-IDF)</h2>
-    <p>Core terms ranked by relevance across uploaded document chunks.</p>
+    <h2>Interactive Knowledge Graph (TF-IDF)</h2>
+    <p>Explore core concepts and their co-occurrence links across uploaded document chunks.</p>
   </div>
 
   <form
@@ -10,7 +10,6 @@
     hx-target="#concepts-container"
     hx-swap="outerHTML"
   >
-    <input type="hidden" name="view" value="{{ active_view }}" />
     <label>
       Document scope
       <select name="document_id">
@@ -28,215 +27,113 @@
       <input type="number" name="top_n" min="5" max="100" value="{{ top_n }}" />
     </label>
 
-    <button type="submit">Refresh</button>
+    <button type="submit">Refresh Graph</button>
   </form>
 
-  <div class="concepts-tabs" role="tablist" aria-label="Concept views">
-    <button
-      type="button"
-      class="concepts-tab {% if active_view == 'graph' %}is-active{% endif %}"
-      data-target="graph"
-      data-graph-id="{{ graph_id }}"
-    >
-      Knowledge Graph
-    </button>
-    <button
-      type="button"
-      class="concepts-tab {% if active_view == 'table' %}is-active{% endif %}"
-      data-target="table"
-      data-graph-id="{{ graph_id }}"
-    >
-      Ranked Table
-    </button>
-  </div>
+  {% if concepts %}
+    <div class="concept-graph-layout">
+      <div class="concept-graph-canvas" id="concept-graph-canvas-{{ graph_id }}"></div>
+      <aside class="concept-node-detail" id="concept-node-detail-{{ graph_id }}">
+        <h3>Concept Details</h3>
+        <p>Click a concept node to inspect score, coverage, and source evidence.</p>
+      </aside>
+    </div>
+    <script id="concept-graph-data-{{ graph_id }}" type="application/json">{{ graph_payload | tojson }}</script>
+    <script>
+      (() => {
+        const graphId = "{{ graph_id }}";
+        const dataEl = document.getElementById(`concept-graph-data-${graphId}`);
+        const canvasEl = document.getElementById(`concept-graph-canvas-${graphId}`);
+        const detailEl = document.getElementById(`concept-node-detail-${graphId}`);
+        if (!dataEl || !canvasEl || typeof vis === "undefined") {
+          return;
+        }
 
-  <div class="concepts-view {% if active_view == 'graph' %}is-active{% endif %}" id="concepts-graph-view-{{ graph_id }}">
-    {% if concepts %}
-      <div class="concept-graph-layout">
-        <div class="concept-graph-canvas" id="concept-graph-canvas-{{ graph_id }}"></div>
-        <aside class="concept-node-detail" id="concept-node-detail-{{ graph_id }}">
-          <h3>Concept Details</h3>
-          <p>Click a concept node to inspect score, coverage, and source evidence.</p>
-        </aside>
-      </div>
-      <script id="concept-graph-data-{{ graph_id }}" type="application/json">{{ graph_payload | tojson }}</script>
-      <script>
-        (() => {
-          const graphId = "{{ graph_id }}";
-          const dataEl = document.getElementById(`concept-graph-data-${graphId}`);
-          const canvasEl = document.getElementById(`concept-graph-canvas-${graphId}`);
-          const detailEl = document.getElementById(`concept-node-detail-${graphId}`);
-          if (!dataEl || !canvasEl || typeof vis === "undefined") {
+        const payload = JSON.parse(dataEl.textContent || "{}");
+        const nodes = (payload.nodes || []).map((node) => ({
+          id: node.id,
+          label: node.label,
+          value: node.value,
+          shape: "dot",
+          font: { size: 15 },
+          color: {
+            background: "#e0f2fe",
+            border: "#0369a1",
+            highlight: { background: "#bae6fd", border: "#0c4a6e" },
+          },
+          concept: node,
+        }));
+        const edges = (payload.edges || []).map((edge) => ({
+          from: edge.from,
+          to: edge.to,
+          value: edge.value,
+          title: edge.title,
+          color: { color: "#9ca3af", highlight: "#475569" },
+          smooth: { type: "dynamic" },
+        }));
+
+        const network = new vis.Network(
+          canvasEl,
+          {
+            nodes: new vis.DataSet(nodes),
+            edges: new vis.DataSet(edges),
+          },
+          {
+            physics: {
+              stabilization: false,
+              barnesHut: { gravitationalConstant: -5500, springLength: 125, springConstant: 0.045 },
+            },
+            interaction: { hover: true, tooltipDelay: 180 },
+            nodes: { scaling: { min: 12, max: 36 } },
+            edges: { scaling: { min: 1, max: 5 } },
+          }
+        );
+
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
+        network.on("click", (params) => {
+          if (!params.nodes.length || !detailEl) {
             return;
           }
-
-          const payload = JSON.parse(dataEl.textContent || "{}");
-          const nodes = (payload.nodes || []).map((node) => ({
-            id: node.id,
-            label: node.label,
-            value: node.value,
-            shape: "dot",
-            font: { size: 15 },
-            color: {
-              background: "#e0f2fe",
-              border: "#0369a1",
-              highlight: { background: "#bae6fd", border: "#0c4a6e" },
-            },
-            concept: node,
-          }));
-          const edges = (payload.edges || []).map((edge) => ({
-            from: edge.from,
-            to: edge.to,
-            value: edge.value,
-            title: edge.title,
-            color: { color: "#9ca3af", highlight: "#475569" },
-            smooth: { type: "dynamic" },
-          }));
-
-          const network = new vis.Network(
-            canvasEl,
-            {
-              nodes: new vis.DataSet(nodes),
-              edges: new vis.DataSet(edges),
-            },
-            {
-              physics: {
-                stabilization: false,
-                barnesHut: { gravitationalConstant: -5500, springLength: 125, springConstant: 0.045 },
-              },
-              interaction: { hover: true, tooltipDelay: 180 },
-              nodes: { scaling: { min: 12, max: 36 } },
-              edges: { scaling: { min: 1, max: 5 } },
-            }
-          );
-
-          function escapeHtml(value) {
-            return String(value)
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/\"/g, "&quot;")
-              .replace(/'/g, "&#039;");
+          const node = nodes.find((item) => item.id === params.nodes[0]);
+          if (!node || !node.concept) {
+            return;
           }
+          const concept = node.concept;
+          const supports = concept.supports || [];
+          const supportItems = supports
+            .slice(0, 3)
+            .map((support) => {
+              const href = `/ui/document/${support.document_id}?page=${support.page_start}`;
+              return `<li><a class="source-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(support.filename)} p${support.page_start}-${support.page_end}</a><p class="concept-snippet">${escapeHtml(support.snippet)}</p></li>`;
+            })
+            .join("");
 
-          network.on("click", (params) => {
-            if (!params.nodes.length || !detailEl) {
-              return;
-            }
-            const node = nodes.find((item) => item.id === params.nodes[0]);
-            if (!node || !node.concept) {
-              return;
-            }
-            const concept = node.concept;
-            const supports = concept.supports || [];
-            const supportItems = supports
-              .slice(0, 3)
-              .map((support) => {
-                const href = `/ui/document/${support.document_id}?page=${support.page_start}`;
-                return `<li><a class="source-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(support.filename)} p${support.page_start}-${support.page_end}</a><p class="concept-snippet">${escapeHtml(support.snippet)}</p></li>`;
-              })
-              .join("");
-
-            detailEl.innerHTML = `
-              <h3>${escapeHtml(concept.term)}</h3>
-              <p><strong>TF-IDF:</strong> ${Number(concept.tfidf).toFixed(4)}</p>
-              <p><strong>TF:</strong> ${concept.tf} <strong>DF:</strong> ${concept.df}</p>
-              <p><strong>Coverage:</strong> ${(Number(concept.coverage) * 100).toFixed(1)}%</p>
-              <h4>Evidence</h4>
-              <ul class="concept-support-list">${supportItems || "<li>No evidence snippets.</li>"}</ul>
-            `;
-          });
-        })();
-      </script>
-    {% else %}
-      <div class="status-card idle">
-        {% if total_documents == 0 %}
-          Upload PDFs to generate a concept graph.
-        {% else %}
-          No concepts available for graph generation yet.
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="concepts-view {% if active_view == 'table' %}is-active{% endif %}" id="concepts-table-view-{{ graph_id }}">
-    {% if concepts %}
-      <div class="concepts-table-wrap">
-        <table class="concepts-table">
-          <thead>
-            <tr>
-              <th>Term</th>
-              <th>TF-IDF</th>
-              <th>TF</th>
-              <th>DF</th>
-              <th>Coverage</th>
-              <th>Evidence</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for concept in concepts %}
-              <tr>
-                <td><code>{{ concept.term }}</code></td>
-                <td>{{ '%.4f' % concept.tfidf }}</td>
-                <td>{{ concept.tf }}</td>
-                <td>{{ concept.df }}</td>
-                <td>{{ '%.1f' % (concept.document_coverage * 100) }}%</td>
-                <td>
-                  {% if concept.supports %}
-                    {% set support = concept.supports[0] %}
-                    <a class="source-link" href="/ui/document/{{ support.document_id }}?page={{ support.page_start }}" target="_blank" rel="noopener noreferrer">
-                      {{ support.filename }} p{{ support.page_start }}-{{ support.page_end }}
-                    </a>
-                    <p class="concept-snippet">{{ support.snippet }}</p>
-                  {% else %}
-                    <span class="muted">No support</span>
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="status-card idle">
-        {% if total_documents == 0 %}
-          Upload PDFs to generate TF-IDF key concepts.
-        {% else %}
-          No concepts matched this filter yet.
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-
-  <script>
-    (() => {
-      const graphId = "{{ graph_id }}";
-      const root = document.getElementById("concepts-container");
-      if (!root) {
-        return;
-      }
-      const tabs = root.querySelectorAll(`.concepts-tab[data-graph-id='${graphId}']`);
-      const graphView = document.getElementById(`concepts-graph-view-${graphId}`);
-      const tableView = document.getElementById(`concepts-table-view-${graphId}`);
-      if (!tabs.length || !graphView || !tableView) {
-        return;
-      }
-
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          const target = tab.getAttribute("data-target");
-          tabs.forEach((candidate) => candidate.classList.remove("is-active"));
-          tab.classList.add("is-active");
-
-          if (target === "table") {
-            tableView.classList.add("is-active");
-            graphView.classList.remove("is-active");
-          } else {
-            graphView.classList.add("is-active");
-            tableView.classList.remove("is-active");
-          }
+          detailEl.innerHTML = `
+            <h3>${escapeHtml(concept.term)}</h3>
+            <p><strong>TF-IDF:</strong> ${Number(concept.tfidf).toFixed(4)}</p>
+            <p><strong>TF:</strong> ${concept.tf} <strong>DF:</strong> ${concept.df}</p>
+            <p><strong>Coverage:</strong> ${(Number(concept.coverage) * 100).toFixed(1)}%</p>
+            <h4>Evidence</h4>
+            <ul class="concept-support-list">${supportItems || "<li>No evidence snippets.</li>"}</ul>
+          `;
         });
-      });
-    })();
-  </script>
+      })();
+    </script>
+  {% else %}
+    <div class="status-card idle">
+      {% if total_documents == 0 %}
+        Upload PDFs to generate a concept graph.
+      {% else %}
+        No concepts available for graph generation yet.
+      {% endif %}
+    </div>
+  {% endif %}
 </div>

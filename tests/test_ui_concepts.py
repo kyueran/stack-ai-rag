@@ -71,7 +71,7 @@ class StubConceptService:
         return (1, self.get_concepts(document_id=document_id)[1], [])
 
 
-def test_ui_concepts_panel_renders_tfidf_table(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ui_concepts_panel_renders_interactive_graph(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     import app.api.routes.ui as ui_route
 
     monkeypatch.setattr(ui_route, "get_concept_service", lambda: StubConceptService())
@@ -79,10 +79,10 @@ def test_ui_concepts_panel_renders_tfidf_table(client: TestClient, monkeypatch: 
     response = client.get("/ui/concepts?top_n=20")
 
     assert response.status_code == 200
-    assert "Key Concepts (TF-IDF)" in response.text
-    assert "Knowledge Graph" in response.text
+    assert "Interactive Knowledge Graph (TF-IDF)" in response.text
+    assert "Ranked Table" not in response.text
     assert "equation" in response.text
-    assert "/ui/document/doc-a?page=2" in response.text
+    assert "/ui/document/${support.document_id}?page=${support.page_start}" in response.text
 
 
 def test_ui_concepts_panel_hides_stale_data_without_backing_pdf(

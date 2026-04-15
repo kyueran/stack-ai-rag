@@ -19,34 +19,34 @@
       <p>Upload PDFs, ask questions, and get citation-backed answers.</p>
     </header>
 
-    <section class="panel-grid">
-      <section class="panel upload-panel">
-        <h2>Knowledge Base Upload</h2>
-        <form
-          id="upload-form"
-          class="stack"
-          enctype="multipart/form-data"
-          hx-post="/ui/ingest"
-          hx-encoding="multipart/form-data"
-          hx-target="#ingest-status"
-          hx-swap="outerHTML"
-          hx-indicator="#upload-loading"
-          hx-on::after-request="htmx.ajax('GET', '/ui/concepts', {target:'#concepts-container', swap:'outerHTML'})"
-        >
-          <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
-          <button type="submit">Ingest PDFs</button>
-        </form>
-        <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
-        <div id="ingest-status" class="status-card idle">No uploads yet.</div>
-      </section>
+    <nav class="mode-tabs" aria-label="App mode">
+      <button type="button" class="mode-tab is-active" data-mode="workspace">Workspace</button>
+      <button type="button" class="mode-tab" data-mode="graph">Interactive Knowledge Graph</button>
+    </nav>
 
-      <section class="panel workspace-panel">
-        <div class="workspace-tabs" role="tablist" aria-label="Workspace tabs">
-          <button type="button" class="workspace-tab is-active" data-target="chat">Chat</button>
-          <button type="button" class="workspace-tab" data-target="concepts">Key Concepts</button>
-        </div>
+    <section id="mode-workspace" class="mode-view is-active">
+      <section class="panel-grid">
+        <section class="panel upload-panel">
+          <h2>Knowledge Base Upload</h2>
+          <form
+            id="upload-form"
+            class="stack"
+            enctype="multipart/form-data"
+            hx-post="/ui/ingest"
+            hx-encoding="multipart/form-data"
+            hx-target="#ingest-status"
+            hx-swap="outerHTML"
+            hx-indicator="#upload-loading"
+            hx-on::after-request="window.refreshKnowledgeGraph && window.refreshKnowledgeGraph()"
+          >
+            <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
+            <button type="submit">Ingest PDFs</button>
+          </form>
+          <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
+          <div id="ingest-status" class="status-card idle">No uploads yet.</div>
+        </section>
 
-        <section id="workspace-chat" class="workspace-view is-active">
+        <section class="panel chat-panel">
           <h2>Chat</h2>
           <form
             id="query-form"
@@ -73,39 +73,55 @@
             <div id="policy-notice" class="policy-note"></div>
           </aside>
         </section>
+      </section>
+    </section>
 
-        <section id="workspace-concepts" class="workspace-view">
-          <div id="concepts-container" data-loaded="false">
-            <div class="status-card idle">Open this tab to visualize TF-IDF key concepts.</div>
-          </div>
-        </section>
+    <section id="mode-graph" class="mode-view">
+      <section class="panel graph-panel">
+        <div id="concepts-container" data-loaded="false">
+          <div class="status-card idle">Switch to this mode to visualize your concept graph.</div>
+        </div>
       </section>
     </section>
   </main>
 
   <script>
     (() => {
-      const tabs = document.querySelectorAll(".workspace-tab");
-      const chatView = document.getElementById("workspace-chat");
-      const conceptsView = document.getElementById("workspace-concepts");
+      const tabs = document.querySelectorAll(".mode-tab");
+      const workspaceView = document.getElementById("mode-workspace");
+      const graphView = document.getElementById("mode-graph");
       const conceptsContainer = document.getElementById("concepts-container");
-      if (!tabs.length || !chatView || !conceptsView || !conceptsContainer) {
+      if (!tabs.length || !workspaceView || !graphView || !conceptsContainer) {
         return;
       }
 
-      function setActive(target) {
-        tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.target === target));
-        chatView.classList.toggle("is-active", target === "chat");
-        conceptsView.classList.toggle("is-active", target === "concepts");
+      let graphLoaded = false;
 
-        if (target === "concepts" && conceptsContainer.dataset.loaded !== "true" && typeof htmx !== "undefined") {
+      function loadGraph() {
+        if (!graphLoaded && typeof htmx !== "undefined") {
           htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
-          conceptsContainer.dataset.loaded = "true";
+          graphLoaded = true;
+        }
+      }
+
+      window.refreshKnowledgeGraph = () => {
+        if (typeof htmx !== "undefined") {
+          htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
+          graphLoaded = true;
+        }
+      };
+
+      function setMode(mode) {
+        tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.mode === mode));
+        workspaceView.classList.toggle("is-active", mode === "workspace");
+        graphView.classList.toggle("is-active", mode === "graph");
+        if (mode === "graph") {
+          loadGraph();
         }
       }
 
       tabs.forEach((tab) => {
-        tab.addEventListener("click", () => setActive(tab.dataset.target || "chat"));
+        tab.addEventListener("click", () => setMode(tab.dataset.mode || "workspace"));
       });
     })();
   </script>

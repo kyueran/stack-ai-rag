@@ -36,7 +36,6 @@ def ui_concepts(
     request: Request,
     document_id: str | None = None,
     top_n: int = 30,
-    view: str = "graph",
 ) -> HTMLResponse:
     concept_service = get_concept_service()
     documents = [row for row in concept_service.get_document_options() if _has_backing_pdf(row.document_id)]
@@ -87,7 +86,6 @@ def ui_concepts(
             "selected_document_id": scoped_document_id or "",
             "top_n": top_n,
             "total_documents": total_documents,
-            "active_view": view if view in {"table", "graph"} else "graph",
             "graph_payload": graph_payload,
             "graph_id": graph_id,
         },

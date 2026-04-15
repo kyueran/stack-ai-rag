@@ -164,34 +164,35 @@ input[type="file"], textarea, select {
   padding-top: 0.8rem;
 }
 
-.workspace-tabs {
+.mode-tabs {
   display: inline-flex;
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 0.7rem;
+  margin-top: 1rem;
 }
 
-.workspace-tab {
+.mode-tab {
   border: none;
   background: #f8fafc;
   color: var(--ink);
-  padding: 0.5rem 0.95rem;
+  padding: 0.52rem 1rem;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
 
-.workspace-tab.is-active {
+.mode-tab.is-active {
   background: #dbeafe;
   color: #1d4ed8;
 }
 
-.workspace-view {
+.mode-view {
   display: none;
+  margin-top: 0.9rem;
 }
 
-.workspace-view.is-active {
+.mode-view.is-active {
   display: block;
 }
 
@@ -266,36 +267,6 @@ input[type="file"], textarea, select {
   font-size: 0.88rem;
 }
 
-.concepts-tabs {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.concepts-tab {
-  border: none;
-  background: #f8fafc;
-  color: var(--ink);
-  padding: 0.45rem 0.8rem;
-  font-size: 0.86rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.concepts-tab.is-active {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.concepts-view {
-  display: none;
-}
-
-.concepts-view.is-active {
-  display: block;
-}
-
 .concept-graph-layout {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
@@ -333,31 +304,6 @@ input[type="file"], textarea, select {
 
 .concept-support-list li {
   margin-bottom: 0.45rem;
-}
-
-.concepts-table-wrap {
-  overflow: auto;
-  max-height: 430px;
-}
-
-.concepts-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.concepts-table th,
-.concepts-table td {
-  border: 1px solid var(--line);
-  padding: 0.45rem 0.5rem;
-  vertical-align: top;
-  text-align: left;
-}
-
-.concepts-table thead th {
-  position: sticky;
-  top: 0;
-  background: #f7fbff;
 }
 
 .concept-snippet {
