@@ -39,11 +39,18 @@ def ui_concepts(
     view: str = "graph",
 ) -> HTMLResponse:
     concept_service = get_concept_service()
-    total_documents, concepts, graph_edges = concept_service.get_concept_graph(
-        document_id=document_id or None,
-        top_n=top_n,
-    )
-    documents = concept_service.get_document_options()
+    documents = [row for row in concept_service.get_document_options() if _has_backing_pdf(row.document_id)]
+    active_document_ids = {row.document_id for row in documents}
+    scoped_document_id = document_id if document_id and document_id in active_document_ids else None
+
+    if documents:
+        total_documents, concepts, graph_edges = concept_service.get_concept_graph(
+            document_id=scoped_document_id,
+            top_n=top_n,
+        )
+    else:
+        total_documents, concepts, graph_edges = 0, [], []
+
     graph_payload = {
         "nodes": [
             {
@@ -77,7 +84,7 @@ def ui_concepts(
         context={
             "concepts": concepts,
             "documents": documents,
-            "selected_document_id": document_id or "",
+            "selected_document_id": scoped_document_id or "",
             "top_n": top_n,
             "total_documents": total_documents,
             "active_view": view if view in {"table", "graph"} else "graph",
@@ -123,8 +130,7 @@ def ui_query(
     )
 
 
-@router.get("/ui/document/{document_id}")
-def ui_document(document_id: str) -> FileResponse:
+def _resolve_document_pdf(document_id: str) -> Path:
     if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -133,5 +139,37 @@ def ui_document(document_id: str) -> FileResponse:
     if not matches:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    pdf_path = matches[0]
-    return FileResponse(path=pdf_path, media_type="application/pdf", filename=pdf_path.name)
+    return matches[0]
+
+
+def _has_backing_pdf(document_id: str) -> bool:
+    if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
+        return False
+    raw_dir = get_settings().data_dir / "pdfs" / "raw"
+    return any(raw_dir.glob(f"{document_id}_*.pdf"))
+
+
+@router.get("/ui/document/{document_id}", response_class=HTMLResponse)
+def ui_document_viewer(request: Request, document_id: str, page: int = 1) -> HTMLResponse:
+    _resolve_document_pdf(document_id)
+    safe_page = max(page, 1)
+    return _templates.TemplateResponse(
+        request=request,
+        name="document_viewer.html",
+        context={
+            "title": f"Document Viewer - {document_id}",
+            "document_id": document_id,
+            "page": safe_page,
+            "pdf_src": f"/ui/document/{document_id}/raw#page={safe_page}",
+        },
+    )
+
+
+@router.get("/ui/document/{document_id}/raw")
+def ui_document_raw(document_id: str) -> FileResponse:
+    pdf_path = _resolve_document_pdf(document_id)
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )

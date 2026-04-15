@@ -42,7 +42,7 @@
   {% if response.citations %}
     {% for citation in response.citations %}
       <li>
-        <a class="source-link" href="/ui/document/{{ citation.document_id }}#page={{ citation.page_start }}" target="_blank" rel="noopener noreferrer">
+        <a class="source-link" href="/ui/document/{{ citation.document_id }}?page={{ citation.page_start }}" target="_blank" rel="noopener noreferrer">
           <code>{{ citation.chunk_id }}</code> (p{{ citation.page_start }}-{{ citation.page_end }})
         </a>
         <small>score {{ '%.3f' % citation.score }}</small>

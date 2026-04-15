@@ -21,7 +21,7 @@ def test_build_answer_view_list_and_source_linkification() -> None:
     assert view["mode"] == "list"
     list_items = cast(list[object], view["list_items"])
     first_item = str(list_items[0])
-    assert "/ui/document/0123456789abcdef0123456789abcdef#page=3" in first_item
+    assert "/ui/document/0123456789abcdef0123456789abcdef?page=3" in first_item
 
 
 def test_build_answer_view_paragraph_mode_preserves_blocks() -> None:

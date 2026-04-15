@@ -40,40 +40,74 @@
         <div id="ingest-status" class="status-card idle">No uploads yet.</div>
       </section>
 
-      <section class="panel concepts-panel-shell">
-        <div id="concepts-container" hx-get="/ui/concepts" hx-trigger="load" hx-swap="outerHTML">
-          <div class="status-card idle">Loading TF-IDF concepts...</div>
-        </div>
-      </section>
-
-      <section class="panel chat-panel">
-        <h2>Chat</h2>
-        <form
-          id="query-form"
-          class="stack"
-          hx-post="/ui/query"
-          hx-target="#chat-thread"
-          hx-swap="beforeend"
-          hx-indicator="#query-loading"
-        >
-          <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
-          <button type="submit">Ask</button>
-        </form>
-        <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
-
-        <div id="chat-thread" class="chat-thread">
-          <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
+      <section class="panel workspace-panel">
+        <div class="workspace-tabs" role="tablist" aria-label="Workspace tabs">
+          <button type="button" class="workspace-tab is-active" data-target="chat">Chat</button>
+          <button type="button" class="workspace-tab" data-target="concepts">Key Concepts</button>
         </div>
 
-        <aside class="evidence-panel">
-          <h3>Citations</h3>
-          <ul id="citation-list">
-            <li>Responses will list supporting chunk IDs and page ranges here.</li>
-          </ul>
-          <div id="policy-notice" class="policy-note"></div>
-        </aside>
+        <section id="workspace-chat" class="workspace-view is-active">
+          <h2>Chat</h2>
+          <form
+            id="query-form"
+            class="stack"
+            hx-post="/ui/query"
+            hx-target="#chat-thread"
+            hx-swap="beforeend"
+            hx-indicator="#query-loading"
+          >
+            <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
+            <button type="submit">Ask</button>
+          </form>
+          <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
+
+          <div id="chat-thread" class="chat-thread">
+            <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
+          </div>
+
+          <aside class="evidence-panel">
+            <h3>Citations</h3>
+            <ul id="citation-list">
+              <li>Responses will list supporting chunk IDs and page ranges here.</li>
+            </ul>
+            <div id="policy-notice" class="policy-note"></div>
+          </aside>
+        </section>
+
+        <section id="workspace-concepts" class="workspace-view">
+          <div id="concepts-container" data-loaded="false">
+            <div class="status-card idle">Open this tab to visualize TF-IDF key concepts.</div>
+          </div>
+        </section>
       </section>
     </section>
   </main>
+
+  <script>
+    (() => {
+      const tabs = document.querySelectorAll(".workspace-tab");
+      const chatView = document.getElementById("workspace-chat");
+      const conceptsView = document.getElementById("workspace-concepts");
+      const conceptsContainer = document.getElementById("concepts-container");
+      if (!tabs.length || !chatView || !conceptsView || !conceptsContainer) {
+        return;
+      }
+
+      function setActive(target) {
+        tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.target === target));
+        chatView.classList.toggle("is-active", target === "chat");
+        conceptsView.classList.toggle("is-active", target === "concepts");
+
+        if (target === "concepts" && conceptsContainer.dataset.loaded !== "true" && typeof htmx !== "undefined") {
+          htmx.ajax("GET", "/ui/concepts", { target: "#concepts-container", swap: "outerHTML" });
+          conceptsContainer.dataset.loaded = "true";
+        }
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => setActive(tab.dataset.target || "chat"));
+      });
+    })();
+  </script>
 </body>
 </html>

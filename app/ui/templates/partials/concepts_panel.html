@@ -132,7 +132,7 @@
             const supportItems = supports
               .slice(0, 3)
               .map((support) => {
-                const href = `/ui/document/${support.document_id}#page=${support.page_start}`;
+                const href = `/ui/document/${support.document_id}?page=${support.page_start}`;
                 return `<li><a class="source-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(support.filename)} p${support.page_start}-${support.page_end}</a><p class="concept-snippet">${escapeHtml(support.snippet)}</p></li>`;
               })
               .join("");
@@ -184,7 +184,7 @@
                 <td>
                   {% if concept.supports %}
                     {% set support = concept.supports[0] %}
-                    <a class="source-link" href="/ui/document/{{ support.document_id }}#page={{ support.page_start }}" target="_blank" rel="noopener noreferrer">
+                    <a class="source-link" href="/ui/document/{{ support.document_id }}?page={{ support.page_start }}" target="_blank" rel="noopener noreferrer">
                       {{ support.filename }} p{{ support.page_start }}-{{ support.page_end }}
                     </a>
                     <p class="concept-snippet">{{ support.snippet }}</p>

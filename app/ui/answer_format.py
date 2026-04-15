@@ -121,7 +121,7 @@ def _linkify_sources(text: str, citation_lookup: dict[str, Citation]) -> Markup:
             document_id = None
 
         if document_id:
-            href = f"/ui/document/{document_id}#page={page_start}"
+            href = f"/ui/document/{document_id}?page={page_start}"
             label = f"source:{chunk_id} p{page_start}-{page_end}"
             chunks.append(
                 Markup(

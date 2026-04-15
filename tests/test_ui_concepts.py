@@ -75,10 +75,25 @@ def test_ui_concepts_panel_renders_tfidf_table(client: TestClient, monkeypatch: 
     import app.api.routes.ui as ui_route
 
     monkeypatch.setattr(ui_route, "get_concept_service", lambda: StubConceptService())
+    monkeypatch.setattr(ui_route, "_has_backing_pdf", lambda _: True)
     response = client.get("/ui/concepts?top_n=20")
 
     assert response.status_code == 200
     assert "Key Concepts (TF-IDF)" in response.text
     assert "Knowledge Graph" in response.text
     assert "equation" in response.text
-    assert "/ui/document/doc-a#page=2" in response.text
+    assert "/ui/document/doc-a?page=2" in response.text
+
+
+def test_ui_concepts_panel_hides_stale_data_without_backing_pdf(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.api.routes.ui as ui_route
+
+    monkeypatch.setattr(ui_route, "get_concept_service", lambda: StubConceptService())
+    monkeypatch.setattr(ui_route, "_has_backing_pdf", lambda _: False)
+    response = client.get("/ui/concepts?top_n=20")
+
+    assert response.status_code == 200
+    assert "Upload PDFs to generate a concept graph." in response.text

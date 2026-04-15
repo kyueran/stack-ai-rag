@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/ui/static/styles.css" />
+</head>
+<body>
+  <main class="viewer-shell">
+    <header class="viewer-header">
+      <a class="viewer-back-link" href="/">Back to chat</a>
+      <h1>Document Viewer</h1>
+      <p><code>{{ document_id }}</code> · page {{ page }}</p>
+      <nav class="viewer-nav" aria-label="Page navigation">
+        <a class="viewer-nav-link" href="/ui/document/{{ document_id }}?page={{ 1 if page <= 1 else page - 1 }}">Previous</a>
+        <a class="viewer-nav-link" href="/ui/document/{{ document_id }}?page={{ page + 1 }}">Next</a>
+        <a class="viewer-nav-link" href="{{ pdf_src }}" target="_blank" rel="noopener noreferrer">Open raw PDF</a>
+      </nav>
+    </header>
+    <section class="viewer-frame-wrap">
+      <iframe
+        class="viewer-frame"
+        src="{{ pdf_src }}"
+        title="PDF viewer"
+      ></iframe>
+    </section>
+  </main>
+</body>
+</html>

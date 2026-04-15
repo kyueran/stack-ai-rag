@@ -45,7 +45,7 @@ body {
 
 .panel-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(520px, 1.8fr);
   gap: 1rem;
   margin-top: 1.2rem;
 }
@@ -162,6 +162,37 @@ input[type="file"], textarea, select {
   margin-top: 1rem;
   border-top: 1px solid var(--line);
   padding-top: 0.8rem;
+}
+
+.workspace-tabs {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.7rem;
+}
+
+.workspace-tab {
+  border: none;
+  background: #f8fafc;
+  color: var(--ink);
+  padding: 0.5rem 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.workspace-tab.is-active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.workspace-view {
+  display: none;
+}
+
+.workspace-view.is-active {
+  display: block;
 }
 
 .loading {
@@ -337,6 +368,76 @@ input[type="file"], textarea, select {
 
 .muted {
   color: var(--muted);
+}
+
+.viewer-shell {
+  width: min(1200px, 95vw);
+  margin: 0 auto;
+  padding: 1rem 0 1.2rem;
+}
+
+.viewer-header {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 0.8rem 0.95rem;
+  box-shadow: 0 10px 28px rgba(20, 33, 61, 0.08);
+}
+
+.viewer-header h1 {
+  margin: 0.2rem 0;
+  font-size: clamp(1.3rem, 4vw, 1.9rem);
+}
+
+.viewer-header p {
+  margin: 0.15rem 0 0.5rem;
+  color: var(--muted);
+}
+
+.viewer-back-link {
+  font-size: 0.9rem;
+  color: #0b5ed7;
+  text-decoration: none;
+}
+
+.viewer-back-link:hover {
+  text-decoration: underline;
+}
+
+.viewer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.viewer-nav-link {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.viewer-nav-link:hover {
+  border-color: #94a3b8;
+}
+
+.viewer-frame-wrap {
+  margin-top: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(20, 33, 61, 0.08);
+}
+
+.viewer-frame {
+  width: 100%;
+  height: min(82vh, 1000px);
+  border: none;
 }
 
 @media (max-width: 900px) {

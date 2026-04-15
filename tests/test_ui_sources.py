@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.models.query import Citation, QueryResponse
 
 
-def test_ui_document_route_serves_pdf_file(client: TestClient, monkeypatch: Any, tmp_path: Path) -> None:
+def test_ui_document_route_renders_viewer(client: TestClient, monkeypatch: Any, tmp_path: Path) -> None:
     import app.api.routes.ui as ui_route
 
     document_id = "0123456789abcdef0123456789abcdef"
@@ -20,9 +20,30 @@ def test_ui_document_route_serves_pdf_file(client: TestClient, monkeypatch: Any,
 
     monkeypatch.setattr(ui_route, "get_settings", lambda: DummySettings())
 
-    response = client.get(f"/ui/document/{document_id}")
+    response = client.get(f"/ui/document/{document_id}?page=4")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert f"/ui/document/{document_id}/raw#page=4" in response.text
+
+
+def test_ui_document_raw_route_serves_inline_pdf(client: TestClient, monkeypatch: Any, tmp_path: Path) -> None:
+    import app.api.routes.ui as ui_route
+
+    document_id = "0123456789abcdef0123456789abcdef"
+    raw_dir = tmp_path / "pdfs" / "raw"
+    raw_dir.mkdir(parents=True)
+    sample_pdf = raw_dir / f"{document_id}_sample.pdf"
+    sample_pdf.write_bytes(b"%PDF-1.7\n%sample")
+
+    class DummySettings:
+        data_dir = tmp_path
+
+    monkeypatch.setattr(ui_route, "get_settings", lambda: DummySettings())
+
+    response = client.get(f"/ui/document/{document_id}/raw")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].startswith("inline")
 
 
 def test_ui_query_renders_clickable_inline_source_links(client: TestClient, monkeypatch: Any) -> None:
@@ -52,5 +73,5 @@ def test_ui_query_renders_clickable_inline_source_links(client: TestClient, monk
 
     response = client.post("/ui/query", data={"query": "what is README"})
     assert response.status_code == 200
-    assert "/ui/document/0123456789abcdef0123456789abcdef#page=3" in response.text
+    assert "/ui/document/0123456789abcdef0123456789abcdef?page=3" in response.text
     assert "source:abc123 p3-3" in response.text
