@@ -70,6 +70,7 @@
           if (!concept) {
             return;
           }
+          const conceptLabel = concept.term || concept.label || concept.id || "Concept";
           const supports = Array.isArray(concept.supports) ? concept.supports : [];
           const supportItems = supports
             .slice(0, 3)
@@ -80,7 +81,7 @@
             .join("");
 
           detailEl.innerHTML = `
-            <h3>${escapeHtml(concept.term)}</h3>
+            <h3>${escapeHtml(conceptLabel)}</h3>
             <p><strong>TF-IDF:</strong> ${Number(concept.tfidf).toFixed(4)}</p>
             <p><strong>TF:</strong> ${concept.tf} <strong>DF:</strong> ${concept.df}</p>
             <p><strong>Coverage:</strong> ${(Number(concept.coverage) * 100).toFixed(1)}%</p>
@@ -194,6 +195,8 @@
           }
 
           function renderEdges() {
+            const { width, height } = getBounds();
+            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
             while (svg.firstChild) {
               svg.removeChild(svg.firstChild);
             }

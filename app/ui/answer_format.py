@@ -7,7 +7,15 @@ from markupsafe import Markup, escape
 
 from app.models.query import Citation
 
-SourcePattern = re.compile(r"\[source:([a-zA-Z0-9_-]+)(?:\s+pages?\s+(\d+)-(\d+))?\]")
+RichSourcePattern = re.compile(r"\[source:([a-zA-Z0-9_-]+)(?:\s+pages?\s+(\d+)-(\d+))?\]")
+SourceGroupPattern = re.compile(r"\[(?:\s*source:[a-zA-Z0-9_-]+\s*,\s*)*source:[a-zA-Z0-9_-]+\s*\]")
+StandaloneSourcePattern = re.compile(r"source:([a-zA-Z0-9_-]+)")
+SourceTokenPattern = re.compile(
+    r"\[(?:\s*source:[a-zA-Z0-9_-]+\s*,\s*)*source:[a-zA-Z0-9_-]+\s*\]"
+    r"|\[source:[a-zA-Z0-9_-]+(?:\s+pages?\s+\d+-\d+)?\]"
+    r"|source:[a-zA-Z0-9_-]+"
+)
+SourceIdPattern = re.compile(r"source:([a-zA-Z0-9_-]+)")
 
 
 def build_answer_view(answer: str, citations: list[Citation], output_format: Literal["paragraph", "list", "table"]) -> dict[str, object]:
@@ -106,32 +114,87 @@ def _linkify_sources(text: str, citation_lookup: dict[str, Citation]) -> Markup:
     chunks: list[Markup] = []
     last = 0
 
-    for match in SourcePattern.finditer(text):
-        chunks.append(Markup(escape(text[last : match.start()])))
+    for match in SourceTokenPattern.finditer(text):
+        chunks.append(_format_markdown_segment(text[last : match.start()]))
 
-        chunk_id = match.group(1)
-        citation = citation_lookup.get(chunk_id)
-        if citation is not None:
-            page_start = citation.page_start
-            page_end = citation.page_end
-            document_id = citation.document_id
-        else:
-            page_start = int(match.group(2) or 1)
-            page_end = int(match.group(3) or page_start)
-            document_id = None
-
-        if document_id:
-            href = f"/ui/document/{document_id}?page={page_start}"
-            label = f"source:{chunk_id} p{page_start}-{page_end}"
+        token = match.group(0)
+        if SourceGroupPattern.fullmatch(token):
+            chunks.append(_render_source_group(token, citation_lookup))
+        elif rich_match := RichSourcePattern.fullmatch(token):
+            chunk_id = rich_match.group(1)
+            page_start = int(rich_match.group(2) or 1)
+            page_end = int(rich_match.group(3) or page_start)
             chunks.append(
-                Markup(
-                    f'<a class="source-link" href="{escape(href)}" target="_blank" rel="noopener noreferrer">{escape(label)}</a>'
+                _render_source_reference(
+                    chunk_id=chunk_id,
+                    citation_lookup=citation_lookup,
+                    fallback_page_start=page_start,
+                    fallback_page_end=page_end,
+                )
+            )
+        elif standalone_match := StandaloneSourcePattern.fullmatch(token):
+            chunks.append(
+                _render_source_reference(
+                    chunk_id=standalone_match.group(1),
+                    citation_lookup=citation_lookup,
                 )
             )
         else:
-            chunks.append(Markup(escape(match.group(0))))
+            chunks.append(_format_markdown_segment(token))
 
         last = match.end()
 
-    chunks.append(Markup(escape(text[last:])))
+    chunks.append(_format_markdown_segment(text[last:]))
     return Markup("".join(str(piece) for piece in chunks))
+
+
+def _render_source_group(text: str, citation_lookup: dict[str, Citation]) -> Markup:
+    chunk_ids = [match.group(1) for match in SourceIdPattern.finditer(text)]
+    if not chunk_ids:
+        return _format_markdown_segment(text)
+    links = [
+        _render_source_reference(chunk_id=chunk_id, citation_lookup=citation_lookup, css_class="source-link source-chip")
+        for chunk_id in chunk_ids
+    ]
+    return Markup(f'<span class="source-group">{" ".join(str(link) for link in links)}</span>')
+
+
+def _render_source_reference(
+    chunk_id: str,
+    citation_lookup: dict[str, Citation],
+    *,
+    fallback_page_start: int | None = None,
+    fallback_page_end: int | None = None,
+    css_class: str = "source-link",
+) -> Markup:
+    page_start: int | None
+    page_end: int | None
+    document_id: str | None
+    citation = citation_lookup.get(chunk_id)
+    if citation is not None:
+        page_start = citation.page_start
+        page_end = citation.page_end
+        document_id = citation.document_id
+    else:
+        page_start = fallback_page_start
+        page_end = fallback_page_end or fallback_page_start
+        document_id = None
+
+    label = f"source:{chunk_id}"
+    if page_start is not None and page_end is not None:
+        label = f"{label} p{page_start}-{page_end}"
+
+    if document_id:
+        href = f"/ui/document/{document_id}?page={page_start}"
+        return Markup(
+            f'<a class="{escape(css_class)}" href="{escape(href)}" target="_blank" rel="noopener noreferrer">{escape(label)}</a>'
+        )
+    return Markup(f'<span class="{escape(css_class)} source-plain">{escape(label)}</span>')
+
+
+def _format_markdown_segment(text: str) -> Markup:
+    escaped = str(escape(text))
+    escaped = re.sub(r"\*\*([^\*\n][^\n]*?)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", escaped)
+    escaped = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", escaped)
+    return Markup(escaped)

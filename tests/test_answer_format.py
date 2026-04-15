@@ -32,3 +32,44 @@ def test_build_answer_view_paragraph_mode_preserves_blocks() -> None:
     assert view["mode"] == "paragraph"
     paragraphs = cast(list[object], view["paragraphs"])
     assert len(paragraphs) == 2
+
+
+def test_build_answer_view_renders_inline_markdown() -> None:
+    citations: list[Citation] = []
+    answer = "This has **bold** and *italic* and `code`."
+    view = build_answer_view(answer, citations, "paragraph")
+
+    paragraphs = cast(list[object], view["paragraphs"])
+    paragraph = str(paragraphs[0])
+    assert "<strong>bold</strong>" in paragraph
+    assert "<em>italic</em>" in paragraph
+    assert "<code>code</code>" in paragraph
+
+
+def test_build_answer_view_formats_grouped_sources() -> None:
+    citations = [
+        Citation(
+            chunk_id="abc123",
+            document_id="0123456789abcdef0123456789abcdef",
+            page_start=2,
+            page_end=2,
+            score=0.9,
+            snippet="sample",
+        ),
+        Citation(
+            chunk_id="def456",
+            document_id="fedcba9876543210fedcba9876543210",
+            page_start=5,
+            page_end=6,
+            score=0.88,
+            snippet="sample two",
+        ),
+    ]
+    answer = "Summary [source:abc123,source:def456]."
+    view = build_answer_view(answer, citations, "paragraph")
+
+    paragraphs = cast(list[object], view["paragraphs"])
+    paragraph = str(paragraphs[0])
+    assert "source-chip" in paragraph
+    assert "/ui/document/0123456789abcdef0123456789abcdef?page=2" in paragraph
+    assert "/ui/document/fedcba9876543210fedcba9876543210?page=5" in paragraph

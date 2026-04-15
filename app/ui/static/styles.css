@@ -273,6 +273,29 @@ input[type="file"], textarea, select {
   word-break: break-word;
 }
 
+.source-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin: 0 0.1rem;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 0.08rem 0.48rem;
+  font-size: 0.78rem;
+  font-family: "IBM Plex Mono", monospace;
+  background: #eff6ff;
+  text-decoration: none;
+}
+
+.source-plain {
+  opacity: 0.9;
+}
+
 .concepts-container {
   display: grid;
   gap: 0.7rem;
@@ -322,11 +345,14 @@ input[type="file"], textarea, select {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 1;
 }
 
 .concept-graph-node-layer {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .concept-node-dot {
@@ -339,6 +365,8 @@ input[type="file"], textarea, select {
   box-shadow: 0 3px 10px rgba(12, 74, 110, 0.26);
   cursor: grab;
   transform: translate(-50%, -50%);
+  padding: 0;
+  pointer-events: auto;
 }
 
 .concept-node-dot:active {
@@ -359,6 +387,8 @@ input[type="file"], textarea, select {
   user-select: none;
   max-width: 190px;
   overflow-wrap: anywhere;
+  pointer-events: auto;
+  line-height: 1.25;
 }
 
 .concept-node-detail {
