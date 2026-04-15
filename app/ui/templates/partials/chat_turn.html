@@ -1,43 +1,47 @@
-<article class="bubble user">{{ user_query }}</article>
-<article class="bubble {% if response.status == 'refused' %}refused{% elif response.status == 'insufficient_evidence' %}insufficient{% else %}assistant{% endif %}">
-  {% if answer_view.mode == 'list' %}
-    <ul class="answer-list">
-      {% for item in answer_view.list_items %}
-        <li>{{ item }}</li>
-      {% endfor %}
-    </ul>
-  {% elif answer_view.mode == 'table' and answer_view.table %}
-    <div class="answer-table-wrap">
-      <table class="answer-table">
-        <thead>
-          <tr>
-            {% for header in answer_view.table.headers %}
-              <th>{{ header }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in answer_view.table.rows %}
+<div class="chat-row user-row">
+  <article class="bubble user">{{ user_query }}</article>
+</div>
+<div class="chat-row assistant-row">
+  <article class="bubble {% if response.status == 'refused' %}refused{% elif response.status == 'insufficient_evidence' %}insufficient{% else %}assistant{% endif %}">
+    {% if answer_view.mode == 'list' %}
+      <ul class="answer-list">
+        {% for item in answer_view.list_items %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% elif answer_view.mode == 'table' and answer_view.table %}
+      <div class="answer-table-wrap">
+        <table class="answer-table">
+          <thead>
             <tr>
-              {% for cell in row %}
-                <td>{{ cell }}</td>
+              {% for header in answer_view.table.headers %}
+                <th>{{ header }}</th>
               {% endfor %}
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <div class="answer-paragraphs">
-      {% for paragraph in answer_view.paragraphs %}
-        <p>{{ paragraph }}</p>
-      {% endfor %}
-    </div>
-  {% endif %}
-  {% if response.disclaimer %}
-    <p class="disclaimer">{{ response.disclaimer }}</p>
-  {% endif %}
-</article>
+          </thead>
+          <tbody>
+            {% for row in answer_view.table.rows %}
+              <tr>
+                {% for cell in row %}
+                  <td>{{ cell }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="answer-paragraphs">
+        {% for paragraph in answer_view.paragraphs %}
+          <p>{{ paragraph }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if response.disclaimer %}
+      <p class="disclaimer">{{ response.disclaimer }}</p>
+    {% endif %}
+  </article>
+</div>
 <ul id="citation-list" hx-swap-oob="outerHTML">
   {% if response.citations %}
     {% for citation in response.citations %}

@@ -57,21 +57,27 @@
 
         <section class="panel chat-panel">
           <h2>Chat</h2>
-          <form
-            id="query-form"
-            class="stack"
-            hx-post="/ui/query"
-            hx-target="#chat-thread"
-            hx-swap="beforeend"
-            hx-indicator="#query-loading"
-          >
-            <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="3" required></textarea>
-            <button type="submit">Ask</button>
-          </form>
-          <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
+          <div class="chat-shell">
+            <div id="chat-thread" class="chat-thread">
+              <div class="chat-row assistant-row">
+                <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
+              </div>
+            </div>
 
-          <div id="chat-thread" class="chat-thread">
-            <article class="bubble system">Ready when you are. Ask a document-grounded question.</article>
+            <div id="query-loading" class="loading htmx-indicator">Thinking with evidence...</div>
+
+            <form
+              id="query-form"
+              class="chat-composer"
+              hx-post="/ui/query"
+              hx-target="#chat-thread"
+              hx-swap="beforeend"
+              hx-indicator="#query-loading"
+              hx-on::after-request="this.reset(); if (window.scrollChatToBottom) { window.scrollChatToBottom(); }"
+            >
+              <textarea name="query" placeholder="Ask about your uploaded PDFs..." rows="2" required></textarea>
+              <button type="submit">Send</button>
+            </form>
           </div>
 
           <aside class="evidence-panel">
@@ -144,6 +150,19 @@
 
       tabs.forEach((tab) => {
         tab.addEventListener("click", () => setMode(tab.dataset.mode || "workspace"));
+      });
+
+      const chatThread = document.getElementById("chat-thread");
+      window.scrollChatToBottom = () => {
+        if (!chatThread) {
+          return;
+        }
+        chatThread.scrollTop = chatThread.scrollHeight;
+      };
+      document.body.addEventListener("htmx:afterSwap", (event) => {
+        if (event.target && event.target.id === "chat-thread" && window.scrollChatToBottom) {
+          window.scrollChatToBottom();
+        }
       });
     })();
   </script>

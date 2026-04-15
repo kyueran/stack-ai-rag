@@ -96,9 +96,55 @@ input[type="file"], textarea, select {
 }
 
 .chat-thread {
-  margin-top: 0.85rem;
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 280px;
+  max-height: 54vh;
+  overflow-y: auto;
+  padding: 0.25rem 0.1rem 0.15rem;
+  scroll-behavior: smooth;
+}
+
+.chat-shell {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fcfdff;
+  padding: 0.55rem;
+}
+
+.chat-row {
+  display: flex;
+  width: 100%;
+}
+
+.assistant-row {
+  justify-content: flex-start;
+}
+
+.user-row {
+  justify-content: flex-end;
+}
+
+.chat-composer {
+  margin-top: 0.55rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.5rem;
+  align-items: end;
+}
+
+.chat-composer textarea {
+  resize: vertical;
+  min-height: 54px;
+  max-height: 180px;
+}
+
+.chat-composer button {
+  min-width: 92px;
 }
 
 .bubble {
@@ -116,9 +162,15 @@ input[type="file"], textarea, select {
 .bubble.refused { border-left: 4px solid #dc2626; }
 .bubble.insufficient { border-left: 4px solid var(--warn); }
 .bubble.user {
-  justify-self: end;
+  max-width: min(78%, 720px);
   background: #ecfeff;
   border-left: 4px solid #0891b2;
+}
+.bubble.assistant,
+.bubble.refused,
+.bubble.insufficient,
+.bubble.system {
+  max-width: min(82%, 760px);
 }
 .bubble.assistant { border-left: 4px solid #0f766e; }
 
@@ -521,6 +573,19 @@ input[type="file"], textarea, select {
 
 @media (max-width: 900px) {
   .panel-grid { grid-template-columns: 1fr; }
+  .chat-composer {
+    grid-template-columns: 1fr;
+  }
+  .chat-composer button {
+    width: 100%;
+  }
+  .bubble.user,
+  .bubble.assistant,
+  .bubble.refused,
+  .bubble.insufficient,
+  .bubble.system {
+    max-width: 100%;
+  }
   .concepts-form {
     grid-template-columns: 1fr;
   }
