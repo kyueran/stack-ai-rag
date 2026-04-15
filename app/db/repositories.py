@@ -217,6 +217,14 @@ class IngestionRepository:
                 ],
             )
 
+    def clear_all_documents(self) -> int:
+        with self.database.connection() as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM documents").fetchone()
+            cleared_documents = int(row["count"]) if row else 0
+            conn.execute("DELETE FROM documents")
+            conn.execute("DELETE FROM retrieval_logs")
+        return cleared_documents
+
 
 @dataclass(frozen=True)
 class SemanticCandidate:

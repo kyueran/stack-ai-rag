@@ -8,6 +8,7 @@ def test_ui_root_renders(client: TestClient) -> None:
     assert "Knowledge Base Upload" in response.text
     assert "Chat" in response.text
     assert "Interactive Knowledge Graph" in response.text
+    assert "Clear All Ingested Documents" in response.text
     assert 'id="mode-workspace" class="mode-view is-active"' in response.text
     assert 'id="mode-graph" class="mode-view" aria-hidden="true" hidden' in response.text
 

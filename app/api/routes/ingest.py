@@ -5,11 +5,12 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from app.core.config import get_settings
 from app.core.runtime import get_ingestion_repository, get_mistral_client
 from app.db.repositories import ChunkRecord, EmbeddingRecord
-from app.models.ingest import IngestFileResult, IngestResponse
+from app.models.ingest import ClearIngestResponse, IngestFileResult, IngestResponse
 from app.services.chunking import chunk_pages
 from app.services.ingestion import (
     build_rejected_result,
     cleanup_document_artifacts,
+    clear_all_ingestion_artifacts,
     persist_chunks,
     persist_extracted_pages,
     persist_raw_pdf,
@@ -19,6 +20,19 @@ from app.services.pdf_extract import extract_pdf_pages
 
 router = APIRouter(prefix="/api/v1", tags=["ingestion"])
 FilesParam = Annotated[list[UploadFile], File(...)]
+
+
+@router.post("/ingest/clear", response_model=ClearIngestResponse)
+def clear_ingested_documents() -> ClearIngestResponse:
+    settings = get_settings()
+    ingestion_repository = get_ingestion_repository()
+    cleared_documents = ingestion_repository.clear_all_documents()
+    removed_files = clear_all_ingestion_artifacts(settings)
+    return ClearIngestResponse(
+        status="ok",
+        cleared_documents=cleared_documents,
+        removed_files=removed_files,
+    )
 
 
 @router.post("/ingest", response_model=IngestResponse)

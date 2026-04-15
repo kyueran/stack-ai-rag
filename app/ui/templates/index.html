@@ -42,6 +42,15 @@
             <input type="file" name="files" accept=".pdf,application/pdf" multiple required />
             <button type="submit">Ingest PDFs</button>
           </form>
+          <form
+            class="stack"
+            hx-post="/ui/ingest/clear"
+            hx-target="#ingest-status"
+            hx-swap="outerHTML"
+            hx-on::after-request="window.refreshKnowledgeGraph && window.refreshKnowledgeGraph()"
+          >
+            <button type="submit" class="secondary-button">Clear All Ingested Documents</button>
+          </form>
           <div id="upload-loading" class="loading htmx-indicator">Uploading and indexing...</div>
           <div id="ingest-status" class="status-card idle">No uploads yet.</div>
         </section>

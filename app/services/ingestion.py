@@ -102,3 +102,20 @@ def cleanup_document_artifacts(document_id: str, raw_path: Path, settings: Setti
     for candidate in (raw_path, extraction_path, chunk_path):
         if candidate.exists():
             candidate.unlink()
+
+
+def clear_all_ingestion_artifacts(settings: Settings) -> int:
+    removed_files = 0
+    candidate_directories = (
+        settings.data_dir / "pdfs" / "raw",
+        settings.data_dir / "indexes" / "extracted",
+        settings.data_dir / "indexes" / "chunks",
+    )
+    for directory in candidate_directories:
+        if not directory.exists():
+            continue
+        for candidate in directory.glob("*"):
+            if candidate.is_file():
+                candidate.unlink()
+                removed_files += 1
+    return removed_files

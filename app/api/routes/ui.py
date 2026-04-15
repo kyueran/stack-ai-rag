@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.api.routes.ingest import ingest_files
+from app.api.routes.ingest import clear_ingested_documents, ingest_files
 from app.api.routes.query import query_knowledge_base
 from app.core.config import get_settings
 from app.core.runtime import get_concept_service
@@ -106,6 +106,27 @@ async def ui_ingest(request: Request, files: FilesParam) -> HTMLResponse:
         context={
             "status_class": status_class,
             "result": result,
+            "message": None,
+        },
+    )
+
+
+@router.post("/ui/ingest/clear", response_class=HTMLResponse)
+def ui_clear_ingest(request: Request) -> HTMLResponse:
+    summary = clear_ingested_documents()
+    result = {
+        "status": summary.status,
+        "accepted_count": 0,
+        "rejected_count": 0,
+        "files": [],
+    }
+    return _templates.TemplateResponse(
+        request=request,
+        name="partials/ingest_status.html",
+        context={
+            "status_class": "ok",
+            "result": result,
+            "message": f"Cleared {summary.cleared_documents} documents and removed {summary.removed_files} files.",
         },
     )
 

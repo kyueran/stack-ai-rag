@@ -23,3 +23,9 @@ class IngestResponse(BaseModel):
     accepted_count: int
     rejected_count: int
     files: list[IngestFileResult]
+
+
+class ClearIngestResponse(BaseModel):
+    status: Literal["ok"]
+    cleared_documents: int
+    removed_files: int

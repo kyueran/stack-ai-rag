@@ -1,12 +1,17 @@
 <div id="ingest-status" class="status-card {{ status_class }}">
   <p><strong>Status:</strong> {{ result.status }}</p>
+  {% if message %}
+    <p><strong>{{ message }}</strong></p>
+  {% endif %}
   <p><strong>Accepted:</strong> {{ result.accepted_count }} | <strong>Rejected:</strong> {{ result.rejected_count }}</p>
-  <ul>
-    {% for item in result.files %}
-      <li>
-        {{ item.filename }} - {{ item.status }}
-        {% if item.error %}<span class="error-text">({{ item.error }})</span>{% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  {% if result.files %}
+    <ul>
+      {% for item in result.files %}
+        <li>
+          {{ item.filename }} - {{ item.status }}
+          {% if item.error %}<span class="error-text">({{ item.error }})</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 </div>
