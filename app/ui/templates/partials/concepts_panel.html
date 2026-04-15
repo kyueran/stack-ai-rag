@@ -45,65 +45,17 @@
         const dataEl = document.getElementById(`concept-graph-data-${graphId}`);
         const canvasEl = document.getElementById(`concept-graph-canvas-${graphId}`);
         const detailEl = document.getElementById(`concept-node-detail-${graphId}`);
-        if (!dataEl || !canvasEl || typeof vis === "undefined") {
+        if (!dataEl || !canvasEl || !detailEl) {
           return;
         }
 
         const payload = JSON.parse(dataEl.textContent || "{}");
-        const nodes = (payload.nodes || []).map((node) => ({
-          id: node.id,
-          label: node.label,
-          value: node.value,
-          shape: "dot",
-          font: { size: 15 },
-          color: {
-            background: "#e0f2fe",
-            border: "#0369a1",
-            highlight: { background: "#bae6fd", border: "#0c4a6e" },
-          },
-          concept: node,
-        }));
-        const edges = (payload.edges || []).map((edge) => ({
-          from: edge.from,
-          to: edge.to,
-          value: edge.value,
-          title: edge.title,
-          color: { color: "#9ca3af", highlight: "#475569" },
-          smooth: { type: "dynamic" },
-        }));
-
-        const network = new vis.Network(
-          canvasEl,
-          {
-            nodes: new vis.DataSet(nodes),
-            edges: new vis.DataSet(edges),
-          },
-          {
-            physics: {
-              stabilization: false,
-              barnesHut: { gravitationalConstant: -5500, springLength: 125, springConstant: 0.045 },
-            },
-            interaction: { hover: true, tooltipDelay: 180 },
-            nodes: { scaling: { min: 12, max: 36 } },
-            edges: { scaling: { min: 1, max: 5 } },
-          }
-        );
-        const redrawGraph = () => {
-          network.redraw();
-          network.fit({
-            animation: {
-              duration: 220,
-              easingFunction: "easeInOutQuad",
-            },
-          });
-        };
-        const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(redrawGraph) : null;
-        if (resizeObserver) {
-          resizeObserver.observe(canvasEl);
+        const graphNodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+        const graphEdges = Array.isArray(payload.edges) ? payload.edges : [];
+        if (!graphNodes.length) {
+          detailEl.innerHTML = "<h3>Concept Details</h3><p>No nodes available for this graph.</p>";
+          return;
         }
-        requestAnimationFrame(() => {
-          redrawGraph();
-        });
 
         function escapeHtml(value) {
           return String(value)
@@ -114,16 +66,11 @@
             .replace(/'/g, "&#039;");
         }
 
-        network.on("click", (params) => {
-          if (!params.nodes.length || !detailEl) {
+        function renderDetail(concept) {
+          if (!concept) {
             return;
           }
-          const node = nodes.find((item) => item.id === params.nodes[0]);
-          if (!node || !node.concept) {
-            return;
-          }
-          const concept = node.concept;
-          const supports = concept.supports || [];
+          const supports = Array.isArray(concept.supports) ? concept.supports : [];
           const supportItems = supports
             .slice(0, 3)
             .map((support) => {
@@ -140,7 +87,237 @@
             <h4>Evidence</h4>
             <ul class="concept-support-list">${supportItems || "<li>No evidence snippets.</li>"}</ul>
           `;
-        });
+        }
+
+        function renderWithVis() {
+          const nodes = graphNodes.map((node) => ({
+            id: node.id,
+            label: node.label,
+            value: Math.max(Number(node.value || 0), 0.05),
+            shape: "dot",
+            font: { size: 15 },
+            color: {
+              background: "#e0f2fe",
+              border: "#0369a1",
+              highlight: { background: "#bae6fd", border: "#0c4a6e" },
+            },
+            concept: node,
+          }));
+          const edges = graphEdges.map((edge) => ({
+            from: edge.from,
+            to: edge.to,
+            value: edge.value,
+            title: edge.title,
+            color: { color: "#9ca3af", highlight: "#475569" },
+            smooth: { type: "dynamic" },
+          }));
+
+          const network = new vis.Network(
+            canvasEl,
+            {
+              nodes: new vis.DataSet(nodes),
+              edges: new vis.DataSet(edges),
+            },
+            {
+              physics: {
+                stabilization: false,
+                barnesHut: { gravitationalConstant: -5500, springLength: 125, springConstant: 0.045 },
+              },
+              interaction: { hover: true, tooltipDelay: 180, dragNodes: true, dragView: true, zoomView: true },
+              nodes: { scaling: { min: 12, max: 36 } },
+              edges: { scaling: { min: 1, max: 5 } },
+            }
+          );
+
+          const nodeLookup = new Map(nodes.map((item) => [item.id, item]));
+          network.on("click", (params) => {
+            if (!params.nodes.length) {
+              return;
+            }
+            const selected = nodeLookup.get(params.nodes[0]);
+            if (!selected || !selected.concept) {
+              return;
+            }
+            renderDetail(selected.concept);
+          });
+
+          const redrawGraph = () => {
+            network.redraw();
+            network.fit({ animation: { duration: 220, easingFunction: "easeInOutQuad" } });
+          };
+          const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(redrawGraph) : null;
+          if (resizeObserver) {
+            resizeObserver.observe(canvasEl);
+          }
+          requestAnimationFrame(() => redrawGraph());
+          renderDetail(nodes[0].concept);
+        }
+
+        function renderWithSvgFallback() {
+          canvasEl.innerHTML = "";
+
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.classList.add("concept-graph-svg");
+          canvasEl.appendChild(svg);
+
+          const nodeLayer = document.createElement("div");
+          nodeLayer.className = "concept-graph-node-layer";
+          canvasEl.appendChild(nodeLayer);
+
+          const nodeStates = new Map();
+          const edgeStates = graphEdges.map((edge) => ({ source: edge.from, target: edge.to }));
+          const nodeElements = new Map();
+
+          function getBounds() {
+            return {
+              width: Math.max(canvasEl.clientWidth, 360),
+              height: Math.max(canvasEl.clientHeight, 280),
+            };
+          }
+
+          function initializeNodePositions() {
+            const { width, height } = getBounds();
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.max(Math.min(width, height) * 0.34, 70);
+            graphNodes.forEach((node, index) => {
+              const angle = (Math.PI * 2 * index) / graphNodes.length;
+              const x = graphNodes.length === 1 ? centerX : centerX + radius * Math.cos(angle);
+              const y = graphNodes.length === 1 ? centerY : centerY + radius * Math.sin(angle);
+              nodeStates.set(node.id, {
+                id: node.id,
+                concept: node,
+                x,
+                y,
+              });
+            });
+          }
+
+          function renderEdges() {
+            while (svg.firstChild) {
+              svg.removeChild(svg.firstChild);
+            }
+            edgeStates.forEach((edge) => {
+              const source = nodeStates.get(edge.source);
+              const target = nodeStates.get(edge.target);
+              if (!source || !target) {
+                return;
+              }
+              const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+              line.setAttribute("x1", String(source.x));
+              line.setAttribute("y1", String(source.y));
+              line.setAttribute("x2", String(target.x));
+              line.setAttribute("y2", String(target.y));
+              line.setAttribute("stroke", "#94a3b8");
+              line.setAttribute("stroke-width", "2");
+              line.setAttribute("stroke-opacity", "0.8");
+              svg.appendChild(line);
+            });
+          }
+
+          function clampPosition(x, y) {
+            const { width, height } = getBounds();
+            const margin = 16;
+            return {
+              x: Math.min(Math.max(x, margin), width - margin),
+              y: Math.min(Math.max(y, margin), height - margin),
+            };
+          }
+
+          function updateNodes() {
+            nodeStates.forEach((state, id) => {
+              const nodeEl = nodeElements.get(id);
+              if (!nodeEl) {
+                return;
+              }
+              nodeEl.dot.style.left = `${state.x}px`;
+              nodeEl.dot.style.top = `${state.y}px`;
+              nodeEl.label.style.left = `${state.x}px`;
+              nodeEl.label.style.top = `${state.y}px`;
+            });
+          }
+
+          function redraw() {
+            renderEdges();
+            updateNodes();
+          }
+
+          function bindDrag(dot, nodeId) {
+            let active = false;
+            function moveTo(clientX, clientY) {
+              const rect = canvasEl.getBoundingClientRect();
+              const next = clampPosition(clientX - rect.left, clientY - rect.top);
+              const state = nodeStates.get(nodeId);
+              if (!state) {
+                return;
+              }
+              state.x = next.x;
+              state.y = next.y;
+              redraw();
+            }
+
+            dot.addEventListener("pointerdown", (event) => {
+              active = true;
+              dot.setPointerCapture(event.pointerId);
+              moveTo(event.clientX, event.clientY);
+            });
+
+            dot.addEventListener("pointermove", (event) => {
+              if (!active) {
+                return;
+              }
+              moveTo(event.clientX, event.clientY);
+            });
+
+            dot.addEventListener("pointerup", (event) => {
+              active = false;
+              if (dot.hasPointerCapture(event.pointerId)) {
+                dot.releasePointerCapture(event.pointerId);
+              }
+            });
+          }
+
+          initializeNodePositions();
+
+          graphNodes.forEach((node) => {
+            const state = nodeStates.get(node.id);
+            if (!state) {
+              return;
+            }
+
+            const dot = document.createElement("button");
+            dot.type = "button";
+            dot.className = "concept-node-dot";
+            dot.setAttribute("aria-label", `Concept ${node.label}`);
+
+            const label = document.createElement("button");
+            label.type = "button";
+            label.className = "concept-node-label";
+            label.textContent = node.label;
+
+            dot.addEventListener("click", () => renderDetail(node));
+            label.addEventListener("click", () => renderDetail(node));
+            bindDrag(dot, node.id);
+
+            nodeLayer.appendChild(dot);
+            nodeLayer.appendChild(label);
+            nodeElements.set(node.id, { dot, label });
+          });
+
+          if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(redraw);
+            observer.observe(canvasEl);
+          }
+
+          redraw();
+          renderDetail(graphNodes[0]);
+        }
+
+        if (typeof vis !== "undefined" && typeof vis.Network === "function") {
+          renderWithVis();
+        } else {
+          renderWithSvgFallback();
+        }
       })();
     </script>
   {% else %}
