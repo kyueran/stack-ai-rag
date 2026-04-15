@@ -35,7 +35,7 @@
       <div class="concept-graph-canvas" id="concept-graph-canvas-{{ graph_id }}"></div>
       <aside class="concept-node-detail" id="concept-node-detail-{{ graph_id }}">
         <h3>Concept Details</h3>
-        <p>Click a concept node to inspect score, coverage, and source evidence.</p>
+        <p>Click or drag a node to explore connections and evidence.</p>
       </aside>
     </div>
     <script id="concept-graph-data-{{ graph_id }}" type="application/json">{{ graph_payload | tojson }}</script>
@@ -67,16 +67,13 @@
         }
 
         function renderDetail(concept) {
-          if (!concept) {
-            return;
-          }
           const conceptLabel = concept.term || concept.label || concept.id || "Concept";
           const supports = Array.isArray(concept.supports) ? concept.supports : [];
           const supportItems = supports
             .slice(0, 3)
             .map((support) => {
               const href = `/ui/document/${support.document_id}?page=${support.page_start}`;
-              return `<li><a class="source-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(support.filename)} p${support.page_start}-${support.page_end}</a><p class="concept-snippet">${escapeHtml(support.snippet)}</p></li>`;
+              return `<li><a class=\"source-link\" href=\"${escapeHtml(href)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(support.filename)} p${support.page_start}-${support.page_end}</a><p class=\"concept-snippet\">${escapeHtml(support.snippet)}</p></li>`;
             })
             .join("");
 
@@ -84,243 +81,159 @@
             <h3>${escapeHtml(conceptLabel)}</h3>
             <p><strong>TF-IDF:</strong> ${Number(concept.tfidf).toFixed(4)}</p>
             <p><strong>TF:</strong> ${concept.tf} <strong>DF:</strong> ${concept.df}</p>
-            <p><strong>Coverage:</strong> ${(Number(concept.coverage) * 100).toFixed(1)}%</p>
+            <p><strong>Coverage:</strong> ${(Math.min(Number(concept.coverage), 1) * 100).toFixed(1)}%</p>
             <h4>Evidence</h4>
-            <ul class="concept-support-list">${supportItems || "<li>No evidence snippets.</li>"}</ul>
+            <ul class=\"concept-support-list\">${supportItems || "<li>No evidence snippets.</li>"}</ul>
           `;
         }
 
-        function renderWithVis() {
-          const nodes = graphNodes.map((node) => ({
-            id: node.id,
-            label: node.label,
-            value: Math.max(Number(node.value || 0), 0.05),
-            shape: "dot",
-            font: { size: 15 },
-            color: {
-              background: "#e0f2fe",
-              border: "#0369a1",
-              highlight: { background: "#bae6fd", border: "#0c4a6e" },
-            },
-            concept: node,
-          }));
-          const edges = graphEdges.map((edge) => ({
-            from: edge.from,
-            to: edge.to,
-            value: edge.value,
-            title: edge.title,
-            color: { color: "#9ca3af", highlight: "#475569" },
-            smooth: { type: "dynamic" },
-          }));
-
-          const network = new vis.Network(
-            canvasEl,
-            {
-              nodes: new vis.DataSet(nodes),
-              edges: new vis.DataSet(edges),
-            },
-            {
-              physics: {
-                stabilization: false,
-                barnesHut: { gravitationalConstant: -5500, springLength: 125, springConstant: 0.045 },
-              },
-              interaction: { hover: true, tooltipDelay: 180, dragNodes: true, dragView: true, zoomView: true },
-              nodes: { scaling: { min: 12, max: 36 } },
-              edges: { scaling: { min: 1, max: 5 } },
-            }
-          );
-
-          const nodeLookup = new Map(nodes.map((item) => [item.id, item]));
-          network.on("click", (params) => {
-            if (!params.nodes.length) {
-              return;
-            }
-            const selected = nodeLookup.get(params.nodes[0]);
-            if (!selected || !selected.concept) {
-              return;
-            }
-            renderDetail(selected.concept);
-          });
-
-          const redrawGraph = () => {
-            network.redraw();
-            network.fit({ animation: { duration: 220, easingFunction: "easeInOutQuad" } });
-          };
-          const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(redrawGraph) : null;
-          if (resizeObserver) {
-            resizeObserver.observe(canvasEl);
-          }
-          requestAnimationFrame(() => redrawGraph());
-          renderDetail(nodes[0].concept);
-        }
-
-        function renderWithSvgFallback() {
+        function renderHtmlFallback() {
           canvasEl.innerHTML = "";
+          const fallback = document.createElement("div");
+          fallback.className = "status-card idle";
+          fallback.innerHTML = "Interactive graph library not available. Showing concept list fallback.";
+          canvasEl.appendChild(fallback);
 
-          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-          svg.classList.add("concept-graph-svg");
-          canvasEl.appendChild(svg);
-
-          const nodeLayer = document.createElement("div");
-          nodeLayer.className = "concept-graph-node-layer";
-          canvasEl.appendChild(nodeLayer);
-
-          const nodeStates = new Map();
-          const edgeStates = graphEdges.map((edge) => ({ source: edge.from, target: edge.to }));
-          const nodeElements = new Map();
-
-          function getBounds() {
-            return {
-              width: Math.max(canvasEl.clientWidth, 360),
-              height: Math.max(canvasEl.clientHeight, 280),
-            };
-          }
-
-          function initializeNodePositions() {
-            const { width, height } = getBounds();
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.max(Math.min(width, height) * 0.34, 70);
-            graphNodes.forEach((node, index) => {
-              const angle = (Math.PI * 2 * index) / graphNodes.length;
-              const x = graphNodes.length === 1 ? centerX : centerX + radius * Math.cos(angle);
-              const y = graphNodes.length === 1 ? centerY : centerY + radius * Math.sin(angle);
-              nodeStates.set(node.id, {
-                id: node.id,
-                concept: node,
-                x,
-                y,
-              });
-            });
-          }
-
-          function renderEdges() {
-            const { width, height } = getBounds();
-            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-            while (svg.firstChild) {
-              svg.removeChild(svg.firstChild);
-            }
-            edgeStates.forEach((edge) => {
-              const source = nodeStates.get(edge.source);
-              const target = nodeStates.get(edge.target);
-              if (!source || !target) {
-                return;
-              }
-              const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-              line.setAttribute("x1", String(source.x));
-              line.setAttribute("y1", String(source.y));
-              line.setAttribute("x2", String(target.x));
-              line.setAttribute("y2", String(target.y));
-              line.setAttribute("stroke", "#94a3b8");
-              line.setAttribute("stroke-width", "2");
-              line.setAttribute("stroke-opacity", "0.8");
-              svg.appendChild(line);
-            });
-          }
-
-          function clampPosition(x, y) {
-            const { width, height } = getBounds();
-            const margin = 16;
-            return {
-              x: Math.min(Math.max(x, margin), width - margin),
-              y: Math.min(Math.max(y, margin), height - margin),
-            };
-          }
-
-          function updateNodes() {
-            nodeStates.forEach((state, id) => {
-              const nodeEl = nodeElements.get(id);
-              if (!nodeEl) {
-                return;
-              }
-              nodeEl.dot.style.left = `${state.x}px`;
-              nodeEl.dot.style.top = `${state.y}px`;
-              nodeEl.label.style.left = `${state.x}px`;
-              nodeEl.label.style.top = `${state.y}px`;
-            });
-          }
-
-          function redraw() {
-            renderEdges();
-            updateNodes();
-          }
-
-          function bindDrag(dot, nodeId) {
-            let active = false;
-            function moveTo(clientX, clientY) {
-              const rect = canvasEl.getBoundingClientRect();
-              const next = clampPosition(clientX - rect.left, clientY - rect.top);
-              const state = nodeStates.get(nodeId);
-              if (!state) {
-                return;
-              }
-              state.x = next.x;
-              state.y = next.y;
-              redraw();
-            }
-
-            dot.addEventListener("pointerdown", (event) => {
-              active = true;
-              dot.setPointerCapture(event.pointerId);
-              moveTo(event.clientX, event.clientY);
-            });
-
-            dot.addEventListener("pointermove", (event) => {
-              if (!active) {
-                return;
-              }
-              moveTo(event.clientX, event.clientY);
-            });
-
-            dot.addEventListener("pointerup", (event) => {
-              active = false;
-              if (dot.hasPointerCapture(event.pointerId)) {
-                dot.releasePointerCapture(event.pointerId);
-              }
-            });
-          }
-
-          initializeNodePositions();
-
+          const list = document.createElement("div");
+          list.className = "concept-fallback-list";
           graphNodes.forEach((node) => {
-            const state = nodeStates.get(node.id);
-            if (!state) {
-              return;
-            }
-
-            const dot = document.createElement("button");
-            dot.type = "button";
-            dot.className = "concept-node-dot";
-            dot.setAttribute("aria-label", `Concept ${node.label}`);
-
-            const label = document.createElement("button");
-            label.type = "button";
-            label.className = "concept-node-label";
-            label.textContent = node.label;
-
-            dot.addEventListener("click", () => renderDetail(node));
-            label.addEventListener("click", () => renderDetail(node));
-            bindDrag(dot, node.id);
-
-            nodeLayer.appendChild(dot);
-            nodeLayer.appendChild(label);
-            nodeElements.set(node.id, { dot, label });
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "concept-fallback-item";
+            button.textContent = node.label;
+            button.addEventListener("click", () => renderDetail(node));
+            list.appendChild(button);
           });
-
-          if (typeof ResizeObserver !== "undefined") {
-            const observer = new ResizeObserver(redraw);
-            observer.observe(canvasEl);
-          }
-
-          redraw();
+          canvasEl.appendChild(list);
           renderDetail(graphNodes[0]);
         }
 
-        if (typeof vis !== "undefined" && typeof vis.Network === "function") {
-          renderWithVis();
-        } else {
-          renderWithSvgFallback();
+        if (!window.d3) {
+          renderHtmlFallback();
+          return;
         }
+
+        function renderD3Graph() {
+          canvasEl.innerHTML = "";
+          const width = Math.max(canvasEl.clientWidth, 420);
+          const height = Math.max(canvasEl.clientHeight, 340);
+
+          const nodes = graphNodes.map((node) => ({ ...node }));
+          const links = graphEdges.map((edge) => ({ source: edge.from, target: edge.to, value: Number(edge.value || 1) }));
+
+          const svg = window.d3
+            .select(canvasEl)
+            .append("svg")
+            .attr("class", "concept-graph-svg-runtime")
+            .attr("viewBox", `0 0 ${width} ${height}`);
+
+          const rootGroup = svg.append("g");
+          svg.call(
+            window.d3
+              .zoom()
+              .scaleExtent([0.4, 4])
+              .on("zoom", (event) => {
+                rootGroup.attr("transform", event.transform);
+              })
+          );
+
+          const link = rootGroup
+            .append("g")
+            .attr("stroke", "#94a3b8")
+            .attr("stroke-opacity", 0.85)
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("stroke-width", (d) => 1 + Math.min(d.value, 6) * 0.35);
+
+          const nodeRadius = (node) => 8 + Math.min(Math.max(Number(node.value || 0.2), 0.2), 6) * 1.8;
+
+          const node = rootGroup
+            .append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("r", nodeRadius)
+            .attr("fill", "#7dd3fc")
+            .attr("stroke", "#0c4a6e")
+            .attr("stroke-width", 1.8)
+            .style("cursor", "grab")
+            .on("click", (_event, d) => {
+              renderDetail(d);
+            });
+
+          const label = rootGroup
+            .append("g")
+            .selectAll("text")
+            .data(nodes)
+            .join("text")
+            .text((d) => d.label)
+            .attr("font-size", 12)
+            .attr("font-weight", 600)
+            .attr("fill", "#0f172a")
+            .style("pointer-events", "none")
+            .attr("dy", -14);
+
+          const simulation = window.d3
+            .forceSimulation(nodes)
+            .force("link", window.d3.forceLink(links).id((d) => d.id).distance(95).strength(0.35))
+            .force("charge", window.d3.forceManyBody().strength(-230))
+            .force("center", window.d3.forceCenter(width / 2, height / 2))
+            .force("collision", window.d3.forceCollide().radius((d) => nodeRadius(d) + 12))
+            .on("tick", () => {
+              link
+                .attr("x1", (d) => d.source.x)
+                .attr("y1", (d) => d.source.y)
+                .attr("x2", (d) => d.target.x)
+                .attr("y2", (d) => d.target.y);
+
+              node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+              label.attr("x", (d) => d.x).attr("y", (d) => d.y);
+            });
+
+          const drag = window.d3
+            .drag()
+            .on("start", (event, d) => {
+              if (!event.active) {
+                simulation.alphaTarget(0.3).restart();
+              }
+              d.fx = d.x;
+              d.fy = d.y;
+            })
+            .on("drag", (event, d) => {
+              d.fx = event.x;
+              d.fy = event.y;
+            })
+            .on("end", (event, d) => {
+              if (!event.active) {
+                simulation.alphaTarget(0);
+              }
+              d.fx = null;
+              d.fy = null;
+            });
+
+          node.call(drag);
+
+          if (!links.length) {
+            // Keep single or disconnected nodes visible in a stable cluster.
+            simulation.force("radial", window.d3.forceRadial(Math.min(width, height) * 0.25, width / 2, height / 2).strength(0.08));
+          }
+
+          if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(() => {
+              const nextWidth = Math.max(canvasEl.clientWidth, 420);
+              const nextHeight = Math.max(canvasEl.clientHeight, 340);
+              svg.attr("viewBox", `0 0 ${nextWidth} ${nextHeight}`);
+              simulation.force("center", window.d3.forceCenter(nextWidth / 2, nextHeight / 2));
+              simulation.alpha(0.35).restart();
+            });
+            observer.observe(canvasEl);
+          }
+
+          renderDetail(nodes[0]);
+        }
+
+        renderD3Graph();
       })();
     </script>
   {% else %}

@@ -348,6 +348,12 @@ input[type="file"], textarea, select {
   z-index: 1;
 }
 
+.concept-graph-svg-runtime {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .concept-graph-node-layer {
   position: absolute;
   inset: 0;
@@ -389,6 +395,22 @@ input[type="file"], textarea, select {
   overflow-wrap: anywhere;
   pointer-events: auto;
   line-height: 1.25;
+}
+
+.concept-fallback-list {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.concept-fallback-item {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.82rem;
 }
 
 .concept-node-detail {

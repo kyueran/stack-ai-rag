@@ -221,6 +221,9 @@ class IngestionRepository:
         with self.database.connection() as conn:
             row = conn.execute("SELECT COUNT(*) AS count FROM documents").fetchone()
             cleared_documents = int(row["count"]) if row else 0
+            conn.execute("DELETE FROM terms")
+            conn.execute("DELETE FROM embeddings")
+            conn.execute("DELETE FROM chunks")
             conn.execute("DELETE FROM documents")
             conn.execute("DELETE FROM retrieval_logs")
         return cleared_documents
@@ -367,6 +370,7 @@ class ConceptRepository:
                     SELECT t.term AS term, SUM(t.tf) AS tf
                     FROM terms t
                     JOIN chunks c ON c.chunk_id = t.chunk_id
+                    JOIN documents d ON d.document_id = c.document_id
                     {scope_where_clause}
                     GROUP BY t.term
                 ),
@@ -374,6 +378,7 @@ class ConceptRepository:
                     SELECT t.term AS term, COUNT(DISTINCT c.document_id) AS df
                     FROM terms t
                     JOIN chunks c ON c.chunk_id = t.chunk_id
+                    JOIN documents d ON d.document_id = c.document_id
                     WHERE LENGTH(t.term) >= ?
                     GROUP BY t.term
                 )
@@ -459,6 +464,7 @@ class ConceptRepository:
                 SELECT DISTINCT t.term, t.chunk_id
                 FROM terms t
                 JOIN chunks c ON c.chunk_id = t.chunk_id
+                JOIN documents d ON d.document_id = c.document_id
                 {where_clause}
                 """,
                 params,

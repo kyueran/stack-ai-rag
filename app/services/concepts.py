@@ -90,7 +90,7 @@ class ConceptService:
                     df=row.df,
                     idf=round(idf, 6),
                     tfidf=round(tfidf, 6),
-                    document_coverage=round(row.df / total_docs, 6),
+                    document_coverage=round(min(row.df / total_docs, 1.0), 6),
                     supports=supports,
                 )
             )

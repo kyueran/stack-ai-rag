@@ -1,7 +1,13 @@
 from pathlib import Path
 
 from app.db.database import Database
-from app.db.repositories import ChunkRecord, ConceptRepository, IngestionRepository
+from app.db.repositories import (
+    ChunkRecord,
+    ConceptRepository,
+    ConceptSupportRow,
+    IngestionRepository,
+    TermStatsRow,
+)
 from app.services.concepts import ConceptService
 
 
@@ -111,3 +117,32 @@ def test_concept_service_builds_graph_edges_from_chunk_cooccurrence(tmp_path: Pa
     assert concepts
     assert edges
     assert any({edge.source, edge.target} == {"equation", "model"} for edge in edges)
+
+
+class OverflowCoverageRepository:
+    def list_term_stats(self, document_id: str | None, min_term_length: int) -> list[TermStatsRow]:
+        _ = (document_id, min_term_length)
+        return [TermStatsRow(term="equation", tf=4, df=4, total_docs=1)]
+
+    def list_term_support(self, term: str, document_id: str | None, limit: int = 3) -> list[ConceptSupportRow]:
+        _ = (term, document_id, limit)
+        return [
+            ConceptSupportRow(
+                chunk_id="chunk-1",
+                document_id="doc-a",
+                filename="a.pdf",
+                page_start=1,
+                page_end=1,
+                tf=2,
+                snippet="equation details",
+            )
+        ]
+
+
+def test_concept_service_caps_document_coverage_to_one() -> None:
+    service = ConceptService(OverflowCoverageRepository())  # type: ignore[arg-type]
+    total_docs, concepts = service.get_concepts(top_n=3)
+
+    assert total_docs == 1
+    assert concepts
+    assert concepts[0].document_coverage == 1.0

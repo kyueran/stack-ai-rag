@@ -82,6 +82,7 @@ def test_ui_concepts_panel_renders_interactive_graph(client: TestClient, monkeyp
     assert "Interactive Knowledge Graph (TF-IDF)" in response.text
     assert "Ranked Table" not in response.text
     assert "equation" in response.text
+    assert "forceSimulation" in response.text
     assert "/ui/document/${support.document_id}?page=${support.page_start}" in response.text
 
 
