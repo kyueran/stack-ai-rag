@@ -9,6 +9,7 @@ def test_build_answer_view_list_and_source_linkification() -> None:
         Citation(
             chunk_id="abc123",
             document_id="0123456789abcdef0123456789abcdef",
+            source_filename="policy.pdf",
             page_start=3,
             page_end=3,
             score=0.9,
@@ -22,6 +23,7 @@ def test_build_answer_view_list_and_source_linkification() -> None:
     list_items = cast(list[object], view["list_items"])
     first_item = str(list_items[0])
     assert "/ui/document/0123456789abcdef0123456789abcdef?page=3" in first_item
+    assert "source:policy.pdf p3-3" in first_item
 
 
 def test_build_answer_view_paragraph_mode_preserves_blocks() -> None:

@@ -14,7 +14,7 @@
     <header class="viewer-header">
       <a class="viewer-back-link" href="/">Back to chat</a>
       <h1>Document Viewer</h1>
-      <p><code>{{ document_id }}</code> · page {{ page }}</p>
+      <p><code>{{ document_name }}</code> · page {{ page }}</p>
       <nav class="viewer-nav" aria-label="Page navigation">
         <a class="viewer-nav-link" href="/ui/document/{{ document_id }}?page={{ 1 if page <= 1 else page - 1 }}">Previous</a>
         <a class="viewer-nav-link" href="/ui/document/{{ document_id }}?page={{ page + 1 }}">Next</a>

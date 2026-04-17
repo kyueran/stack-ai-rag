@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K", ge=1, le=100)
     citation_top_k: int = Field(default=5, alias="CITATION_TOP_K", ge=1, le=20)
     evidence_similarity_threshold: float = Field(default=0.35, alias="EVIDENCE_SIMILARITY_THRESHOLD", ge=0.0, le=1.0)
+    query_evidence_min_coverage: float = Field(default=0.34, alias="QUERY_EVIDENCE_MIN_COVERAGE", ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def validate_chunk_window(self) -> "Settings":

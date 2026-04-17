@@ -237,6 +237,7 @@ class SemanticCandidate:
     page_end: int
     text: str
     vector: list[float]
+    source_filename: str | None = None
 
 
 class RetrievalRepository:
@@ -247,9 +248,10 @@ class RetrievalRepository:
         with self.database.connection() as conn:
             rows = conn.execute(
                 """
-                SELECT c.chunk_id, c.document_id, c.page_start, c.page_end, c.text, e.vector_json
+                SELECT c.chunk_id, c.document_id, d.filename, c.page_start, c.page_end, c.text, e.vector_json
                 FROM chunks c
                 JOIN embeddings e ON e.chunk_id = c.chunk_id
+                JOIN documents d ON d.document_id = c.document_id
                 """
             ).fetchall()
         candidates: list[SemanticCandidate] = []
@@ -258,6 +260,7 @@ class RetrievalRepository:
                 SemanticCandidate(
                     chunk_id=str(row["chunk_id"]),
                     document_id=str(row["document_id"]),
+                    source_filename=str(row["filename"]),
                     page_start=int(row["page_start"]),
                     page_end=int(row["page_end"]),
                     text=str(row["text"]),

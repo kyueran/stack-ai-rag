@@ -180,7 +180,8 @@ def _render_source_reference(
         page_end = fallback_page_end or fallback_page_start
         document_id = None
 
-    label = f"source:{chunk_id}"
+    source_name = citation.source_filename if citation is not None and citation.source_filename else chunk_id
+    label = f"source:{source_name}"
     if page_start is not None and page_end is not None:
         label = f"{label} p{page_start}-{page_end}"
 

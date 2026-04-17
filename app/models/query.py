@@ -12,6 +12,7 @@ class QueryRequest(BaseModel):
 class Citation(BaseModel):
     chunk_id: str
     document_id: str
+    source_filename: str | None = None
     page_start: int
     page_end: int
     score: float

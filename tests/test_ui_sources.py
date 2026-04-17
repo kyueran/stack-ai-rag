@@ -60,6 +60,7 @@ def test_ui_query_renders_clickable_inline_source_links(client: TestClient, monk
                 Citation(
                     chunk_id="abc123",
                     document_id="0123456789abcdef0123456789abcdef",
+                    source_filename="readme.pdf",
                     page_start=3,
                     page_end=3,
                     score=0.95,
@@ -74,4 +75,4 @@ def test_ui_query_renders_clickable_inline_source_links(client: TestClient, monk
     response = client.post("/ui/query", data={"query": "what is README"})
     assert response.status_code == 200
     assert "/ui/document/0123456789abcdef0123456789abcdef?page=3" in response.text
-    assert "source:abc123 p3-3" in response.text
+    assert "source:readme.pdf p3-3" in response.text

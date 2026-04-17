@@ -11,18 +11,32 @@ from app.core.runtime import (
 )
 from app.models.query import Citation, QueryRequest, QueryResponse
 from app.services.answer_shape import select_output_format
+from app.services.relevance import query_evidence_coverage
+from app.services.table_completion import ensure_exhaustive_table_coverage
 
 router = APIRouter(prefix="/api/v1", tags=["query"])
+
+
+def _policy_refusal_message(refusal_reason: str | None) -> str:
+    if refusal_reason == "pii_request":
+        return "I can't help with requests involving sensitive personal data."
+    if refusal_reason == "legal_advice_request":
+        return (
+            "I can't provide legal advice. "
+            "Please consult a licensed attorney for advice specific to your situation."
+        )
+    if refusal_reason == "medical_advice_request":
+        return (
+            "I can't provide diagnosis or medication advice. "
+            "Chest pain and shortness of breath can be an emergency. "
+            "Call 911 now or seek emergency care immediately."
+        )
+    return "I can't help with that request."
 
 
 @router.post("/query", response_model=QueryResponse)
 def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
     settings = get_settings()
-    intent_router = get_intent_router()
-    query_rewriter = get_query_rewriter()
-    retrieval_service = get_hybrid_retrieval_service()
-    generation_service = get_generation_service()
-    evidence_checker = get_evidence_checker()
     policy_engine = get_query_policy_engine()
 
     policy_decision = policy_engine.evaluate(payload.query)
@@ -31,10 +45,12 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
             status="refused",
             intent="refusal",
             rewritten_query=payload.query.strip().lower(),
-            answer="I can't help with requests involving sensitive personal data.",
+            answer=_policy_refusal_message(policy_decision.refusal_reason),
             refusal_reason=policy_decision.refusal_reason,
+            disclaimer=policy_decision.disclaimer,
         )
 
+    intent_router = get_intent_router()
     intent_result = intent_router.detect(payload.query)
 
     if intent_result.intent == "chitchat":
@@ -56,6 +72,10 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
             disclaimer=policy_decision.disclaimer,
         )
 
+    query_rewriter = get_query_rewriter()
+    retrieval_service = get_hybrid_retrieval_service()
+    generation_service = get_generation_service()
+    evidence_checker = get_evidence_checker()
     rewritten = query_rewriter.rewrite(payload.query)
     answer_format = select_output_format(payload.query, intent_result.intent)
     top_k = payload.top_k or settings.retrieval_top_k
@@ -76,6 +96,17 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
             disclaimer=policy_decision.disclaimer,
         )
 
+    coverage = query_evidence_coverage(rewritten.rewritten_query, candidates[: settings.citation_top_k])
+    if coverage < settings.query_evidence_min_coverage:
+        return QueryResponse(
+            status="insufficient_evidence",
+            intent=intent_result.intent,
+            rewritten_query=rewritten.rewritten_query,
+            answer="insufficient evidence",
+            retrieval_count=len(candidates),
+            disclaimer=policy_decision.disclaimer,
+        )
+
     strongest_score = max(candidate.fused_score for candidate in candidates)
     if strongest_score < settings.evidence_similarity_threshold:
         return QueryResponse(
@@ -91,6 +122,7 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         Citation(
             chunk_id=item.chunk_id,
             document_id=item.document_id,
+            source_filename=item.source_filename,
             page_start=item.page_start,
             page_end=item.page_end,
             score=item.fused_score,
@@ -102,6 +134,11 @@ def query_knowledge_base(payload: QueryRequest) -> QueryResponse:
         query=payload.query,
         intent=intent_result.intent,
         output_format=answer_format,
+        evidence=candidates[: settings.citation_top_k],
+    )
+    generated_answer = ensure_exhaustive_table_coverage(
+        query=payload.query,
+        answer=generated_answer,
         evidence=candidates[: settings.citation_top_k],
     )
     filtered_answer, unsupported_claims = evidence_checker.filter_answer(

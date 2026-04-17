@@ -9,7 +9,10 @@ def build_system_prompt(intent: str, output_format: OutputFormat) -> str:
     format_instruction = {
         "paragraph": "Respond as a concise paragraph with citations.",
         "list": "Respond as a concise bullet list. Each bullet must be grounded in evidence.",
-        "table": "Respond as a compact markdown table with columns: Claim | Evidence.",
+        "table": (
+            "Respond as a compact markdown table with columns: Claim | Evidence. "
+            "If the query asks per/by/each/all categories, include one row per distinct category in evidence."
+        ),
     }[output_format]
 
     if intent == "knowledge_lookup":
