@@ -13,6 +13,7 @@ class KeywordSearchHit:
     page_start: int
     page_end: int
     score: float
+    source_filename: str | None = None
 
 
 class KeywordSearchService:
@@ -49,16 +50,17 @@ class KeywordSearchService:
 
             postings = conn.execute(
                 f"""
-                SELECT t.term, t.chunk_id, t.tf, c.document_id, c.page_start, c.page_end, c.char_count, c.text
+                SELECT t.term, t.chunk_id, t.tf, c.document_id, d.filename, c.page_start, c.page_end, c.char_count, c.text
                 FROM terms t
                 JOIN chunks c ON c.chunk_id = t.chunk_id
+                JOIN documents d ON d.document_id = c.document_id
                 WHERE t.term IN ({placeholders})
                 """,
                 query_terms,
             ).fetchall()
 
         scores: dict[str, float] = {}
-        metadata: dict[str, tuple[str, int, int, str]] = {}
+        metadata: dict[str, tuple[str, str | None, int, int, str]] = {}
 
         for row in postings:
             term = str(row["term"])
@@ -75,6 +77,7 @@ class KeywordSearchService:
             scores[chunk_id] = scores.get(chunk_id, 0.0) + bm25
             metadata[chunk_id] = (
                 str(row["document_id"]),
+                str(row["filename"]),
                 int(row["page_start"]),
                 int(row["page_end"]),
                 str(row["text"]),
@@ -85,9 +88,10 @@ class KeywordSearchService:
             KeywordSearchHit(
                 chunk_id=chunk_id,
                 document_id=metadata[chunk_id][0],
-                page_start=metadata[chunk_id][1],
-                page_end=metadata[chunk_id][2],
-                text=metadata[chunk_id][3],
+                source_filename=metadata[chunk_id][1],
+                page_start=metadata[chunk_id][2],
+                page_end=metadata[chunk_id][3],
+                text=metadata[chunk_id][4],
                 score=scores[chunk_id],
             )
             for chunk_id in ranked_chunk_ids

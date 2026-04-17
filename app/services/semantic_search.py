@@ -12,6 +12,7 @@ class SemanticSearchHit:
     page_start: int
     page_end: int
     score: float
+    source_filename: str | None = None
 
 
 class SemanticSearchService:
@@ -43,6 +44,7 @@ class SemanticSearchService:
                 page_end=candidate.page_end,
                 text=candidate.text,
                 score=score,
+                source_filename=candidate.source_filename,
             )
             for score, candidate in ranked
         ]

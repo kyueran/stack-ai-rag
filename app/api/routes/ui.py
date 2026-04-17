@@ -161,6 +161,14 @@ def _resolve_document_pdf(document_id: str) -> Path:
     return matches[0]
 
 
+def _document_display_name(document_id: str, pdf_path: Path) -> str:
+    name = pdf_path.name
+    prefix = f"{document_id}_"
+    if name.startswith(prefix):
+        return name[len(prefix) :]
+    return name
+
+
 def _has_backing_pdf(document_id: str) -> bool:
     if not DOCUMENT_ID_PATTERN.fullmatch(document_id):
         return False
@@ -170,14 +178,16 @@ def _has_backing_pdf(document_id: str) -> bool:
 
 @router.get("/ui/document/{document_id}", response_class=HTMLResponse)
 def ui_document_viewer(request: Request, document_id: str, page: int = 1) -> HTMLResponse:
-    _resolve_document_pdf(document_id)
+    pdf_path = _resolve_document_pdf(document_id)
+    document_name = _document_display_name(document_id, pdf_path)
     safe_page = max(page, 1)
     return _templates.TemplateResponse(
         request=request,
         name="document_viewer.html",
         context={
-            "title": f"Document Viewer - {document_id}",
+            "title": f"Document Viewer - {document_name}",
             "document_id": document_id,
+            "document_name": document_name,
             "page": safe_page,
             "pdf_src": f"/ui/document/{document_id}/raw#page={safe_page}",
         },

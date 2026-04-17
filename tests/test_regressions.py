@@ -71,7 +71,7 @@ def test_query_regression_for_weak_evidence_and_policy(client: TestClient, monke
 
     monkeypatch.setattr(query_route, "get_hybrid_retrieval_service", lambda: LowEvidenceRetrieval())
 
-    weak_response = client.post("/api/v1/query", json={"query": "Tell me the exact contract timeline"})
+    weak_response = client.post("/api/v1/query", json={"query": "Tell me the exact implementation timeline"})
     assert weak_response.status_code == 200
     weak_payload = weak_response.json()
     assert weak_payload["status"] == "insufficient_evidence"

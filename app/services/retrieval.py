@@ -15,6 +15,7 @@ class RetrievedChunk:
     semantic_score: float
     rrf_score: float
     fused_score: float
+    source_filename: str | None = None
 
 
 class HybridRetrievalService:
@@ -48,12 +49,13 @@ class HybridRetrievalService:
         keyword_rank = {hit.chunk_id: rank for rank, hit in enumerate(keyword_hits, start=1)}
         semantic_rank = {hit.chunk_id: rank for rank, hit in enumerate(semantic_hits, start=1)}
 
-        metadata: dict[str, tuple[str, int, int, str]] = {}
+        metadata: dict[str, tuple[str, str | None, int, int, str]] = {}
         for hit in keyword_hits:
-            metadata[hit.chunk_id] = (hit.document_id, hit.page_start, hit.page_end, hit.text)
+            metadata[hit.chunk_id] = (hit.document_id, hit.source_filename, hit.page_start, hit.page_end, hit.text)
         for semantic_hit in semantic_hits:
             metadata[semantic_hit.chunk_id] = (
                 semantic_hit.document_id,
+                semantic_hit.source_filename,
                 semantic_hit.page_start,
                 semantic_hit.page_end,
                 semantic_hit.text,
@@ -83,7 +85,7 @@ class HybridRetrievalService:
 
             blended_score = weighted_sum / present_weight if present_weight else 0.0
             fused_score = blended_score + (0.2 * rrf_score)
-            doc_id, page_start, page_end, text = metadata[chunk_id]
+            doc_id, source_filename, page_start, page_end, text = metadata[chunk_id]
             ranked_candidates.append(
                 RetrievedChunk(
                     chunk_id=chunk_id,
@@ -95,6 +97,7 @@ class HybridRetrievalService:
                     semantic_score=semantic_score,
                     rrf_score=rrf_score,
                     fused_score=fused_score,
+                    source_filename=source_filename,
                 )
             )
 
@@ -112,6 +115,7 @@ class HybridRetrievalService:
                 {
                     "chunk_id": candidate.chunk_id,
                     "document_id": candidate.document_id,
+                    "source_filename": candidate.source_filename,
                     "page_start": candidate.page_start,
                     "page_end": candidate.page_end,
                     "keyword_score": round(candidate.keyword_score, 6),
