@@ -33,38 +33,7 @@ A local-first Retrieval-Augmented Generation (RAG) system for PDF knowledge base
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    user["User / UI"]
-    ingest["POST /api/v1/ingest"]
-    query["POST /api/v1/query"]
-    validate["Validation and PDF signature checks"]
-    extract["PDF extraction per page"]
-    chunk["Sentence-aware chunking with overlap"]
-    index["SQLite indexing: chunks, terms, embeddings"]
-    intent["Intent router"]
-    rewrite["Query rewriter"]
-    keyword["Keyword BM25"]
-    semantic["Semantic cosine"]
-    fusion["Hybrid fusion and rerank"]
-    threshold["Evidence threshold"]
-    insufficient["Insufficient evidence"]
-    generate["Prompt templates and Mistral generation"]
-    verify["Hallucination evidence filter"]
-    response["Response"]
-
-    user --> ingest
-    user --> query
-    ingest --> validate --> extract --> chunk --> index
-    query --> intent
-    intent --> rewrite
-    intent --> response
-    rewrite --> keyword --> fusion
-    rewrite --> semantic --> fusion
-    fusion --> threshold
-    threshold --> insufficient
-    threshold --> generate --> verify --> response
-```
+![Architecture flow diagram](docs/architecture-flow.svg)
 
 ### Data model (SQLite)
 
