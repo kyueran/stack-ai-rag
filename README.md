@@ -19,18 +19,6 @@ A local-first Retrieval-Augmented Generation (RAG) system for PDF knowledge base
 - TF-IDF key concepts visualization panel with document filtering and source-page links.
 - SQLite persistence for documents/chunks/terms/embeddings/retrieval logs (no external vector DB).
 
-## Requirements alignment
-
-- FastAPI: yes
-- Mistral API: yes (via `MISTRAL_API_KEY`)
-- No external library for search/RAG: yes (tokenizer, inverted index, BM25, cosine, fusion implemented in this repo)
-- No third-party vector DB: yes (SQLite only)
-- Bonus features: yes
-  - citation threshold with `insufficient evidence`
-  - answer shaping (`paragraph`, `list`, `table`)
-  - hallucination/evidence filtering
-  - refusal/disclaimer policies
-
 ## Architecture
 
 ![Architecture flow diagram](docs/architecture-flow.svg)
